@@ -1,10 +1,15 @@
 from concurrent import futures
 import logging
+import os
+import sys
+from pathlib import Path
+
+root_directory = Path(__file__).resolve().parent.parent
+sys.path.append(str(root_directory))
 
 import grpc
-import lock_pb2_grpc
-import lock_pb2
-import os
+from grpc_start import lock_pb2_grpc
+from grpc_start import lock_pb2
 
 # The server is required to have the following functionality:
 # 1.  Create 100 files that clients can write. The file name should strictly follow this format "file_0", "file_1", ..., "file_99".
