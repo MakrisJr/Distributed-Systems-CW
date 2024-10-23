@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from grpc_start import lock_pb2 as grpc__start_dot_lock__pb2
+import lock_pb2 as grpc__start_dot_lock__pb2
 
 GRPC_GENERATED_VERSION = '1.67.0'
 GRPC_VERSION = grpc.__version__
