@@ -1,0 +1,5 @@
+# temp python files
+*.pyc
+
+# server files
+*file_*
