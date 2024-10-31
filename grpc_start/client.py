@@ -11,6 +11,12 @@ import grpc
 from grpc_start import lock_pb2_grpc
 from grpc_start import lock_pb2
 
+def helper(x):
+    if x == 0:
+        return "Success"
+    elif x == 1:
+        return "File error"
+    else: return "Failure"
 
 def run():
     # NOTE(gRPC Python Team): .close() is possible on a channel and should be
@@ -20,6 +26,7 @@ def run():
     with grpc.insecure_channel("localhost:50051") as channel:
         stub = lock_pb2_grpc.LockServiceStub(channel)
         id = 0
+        
         # Initialise client
         response = stub.client_init(lock_pb2.Int(rc=id))
         id = response.rc
@@ -27,15 +34,15 @@ def run():
 
         # Acquire lock
         response = stub.lock_acquire(lock_pb2.lock_args(client_id=id))
-        print("lock_acquire received: " + str(response.status))
+        print("lock_acquire received: " + helper(response.status))
+
+        # Append to file
+        response = stub.file_append(lock_pb2.file_args(filename="file_1", content="Hello".encode(), client_id=id))
+        print("file_append received: " + helper(response.status))
 
         # Release lock
         response = stub.lock_release(lock_pb2.lock_args(client_id=id))
-        print("lock_release received: " + str(response.status))
-
-        # Append to file
-        response = stub.file_append(lock_pb2.file_args(filename="file_1", content="Hello".encode(), client_id=1))
-        print("file_append received: " + str(response.status))
+        print("lock_release received: " + helper(response.status))
 
         # Close client
         response = stub.client_close(lock_pb2.Int(rc=id))

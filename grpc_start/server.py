@@ -42,6 +42,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         print("lock_acquire received: " + str(request.client_id))
         if self.lock.acquire(blocking=False):
             self.lock_owner = request.client_id
+            # print("current lock owner: " + str(self.lock_owner))
             return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
         else:
             return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
@@ -51,13 +52,28 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_owner == request.client_id:
             self.lock.release()
             self.lock_owner = None
+            # print("current lock owner: " + str(self.lock_owner))
             return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
         else:
             return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
     
     def file_append(self, request, context) -> lock_pb2.Response:
         print("file_append received: " + str(request.filename))
-        return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+        print("Lock owner" + str(self.lock_owner))
+        print("Client ID" + str(request.client_id))
+
+        if self.lock_owner == request.client_id:
+            filename = request.filename
+
+            if os.path.isfile("./files/" + filename):
+                file = open("./files/" + filename, 'ab')
+                file.write(request.content)
+                file.close()
+                return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+            else:
+                return lock_pb2.Response(status=lock_pb2.Status.FILE_ERROR)
+        else:
+            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
     
     def client_close(self, request, context):
         # get process id and remove from set
@@ -68,15 +84,17 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if DEBUG:
             print("client_close received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
+            print()
         return lock_pb2.Int(rc=client_id)
     
 def create_files(n = 100):
-    # create directory if necessary:
+    # create directory & files if necessary:
     if not os.path.exists("./files"):
         os.makedirs("./files")
-    for i in range(n):
-        with open("./files/file_" + str(i), "w") as f:
-            f.write("")
+
+        for i in range(n):
+            with open("./files/file_" + str(i), "w") as f:
+                f.write("")
 
 def serve():
     port = "50051"
