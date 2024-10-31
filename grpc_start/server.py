@@ -4,11 +4,11 @@ import os
 import sys
 from pathlib import Path
 import threading
+import grpc
 
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-import grpc
 from grpc_start import lock_pb2_grpc
 from grpc_start import lock_pb2
 
@@ -21,7 +21,6 @@ from grpc_start import lock_pb2
 DEBUG = True
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-
     # track connected clients in a Set
     def __init__(self):
         self.lock = threading.Lock()
@@ -38,26 +37,37 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             print("connected clients: " + str(self.clients))
         return lock_pb2.Int(rc=self.seq-1)
     
-    def lock_acquire(self, request, context):
+    def lock_acquire(self, request, context) -> lock_pb2.Response:
         print("lock_acquire received: " + str(request.client_id))
-        return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+        if self.lock.acquire(blocking=False):
+            self.lock_owner = request.client_id
+            return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+        else:
+            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
     
-    def lock_release(self, request, context):
+    def lock_release(self, request, context) -> lock_pb2.Response:
         print("lock_release received: " + str(request.client_id))
-        return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+        if self.lock_owner == request.client_id:
+            self.lock.release()
+            self.lock_owner = None
+            return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+        else:
+            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
     
-    def file_append(self, request, context):
+    def file_append(self, request, context) -> lock_pb2.Response:
         print("file_append received: " + str(request.filename))
         return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
     
     def client_close(self, request, context):
         # get process id and remove from set
-        client_id = context.peer()
-        self.clients.remove(client_id)
+        client_id = request.rc
+        while self.lock_owner == client_id:
+            time.sleep(0.01)
+        del self.clients[client_id]
         if DEBUG:
             print("client_close received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
-        return lock_pb2.Int(rc=0)
+        return lock_pb2.Int(rc=client_id)
     
 def create_files(n = 100):
     # create directory if necessary:
