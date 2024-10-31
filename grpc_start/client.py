@@ -19,12 +19,27 @@ def run():
     print("Will try to greet world ...")
     with grpc.insecure_channel("localhost:50051") as channel:
         stub = lock_pb2_grpc.LockServiceStub(channel)
-        # call all methods:
-        response = stub.client_init(lock_pb2.Int(rc=0))
+        id = 0
+        # Initialise client
+        response = stub.client_init(lock_pb2.Int(rc=id))
+        id = response.rc
         print("client_init received: " + str(response.rc))
-        response = stub.lock_acquire(lock_pb2.lock_args(client_id=1))
+
+        # Acquire lock
+        response = stub.lock_acquire(lock_pb2.lock_args(client_id=id))
         print("lock_acquire received: " + str(response.status))
 
+        # Release lock
+        response = stub.lock_release(lock_pb2.lock_args(client_id=id))
+        print("lock_release received: " + str(response.status))
+
+        # Append to file
+        response = stub.file_append(lock_pb2.file_args(filename="file_1", content="Hello".encode(), client_id=1))
+        print("file_append received: " + str(response.status))
+
+        # Close client
+        response = stub.client_close(lock_pb2.Int(rc=id))
+        print("client_close received: " + str(response.rc))
 
 if __name__ == "__main__":
     logging.basicConfig()
