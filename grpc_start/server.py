@@ -22,6 +22,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def __init__(self):
         self.lock = threading.Lock()
         self.lock_owner = None
+        self.clients = {}
 
     def client_init(self, request, context) -> lock_pb2.Int:
         print("client_init received: " + str(request.rc))
