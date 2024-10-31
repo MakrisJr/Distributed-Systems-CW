@@ -3,4 +3,4 @@
 
 # server files
 *file_*
-/grpc_start/__pycache__
+*__pycache__*
