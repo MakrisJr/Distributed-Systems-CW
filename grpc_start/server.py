@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+import threading
 
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
@@ -22,15 +23,20 @@ DEBUG = True
 class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     # track connected clients in a Set
-    clients = set()
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.lock_owner = None
+        self.clients = {}
+        self.seq = 1
 
     def client_init(self, request, context): 
         client_id = context.peer()
-        self.clients.add(client_id)
+        self.clients[self.seq] = client_id
+        self.seq += 1
         if DEBUG:
             print("client_init received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
-        return lock_pb2.Int(rc=0)
+        return lock_pb2.Int(rc=self.seq-1)
     
     def lock_acquire(self, request, context):
         print("lock_acquire received: " + str(request.client_id))
