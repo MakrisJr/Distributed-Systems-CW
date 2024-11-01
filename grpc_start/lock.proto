@@ -5,7 +5,7 @@ package lock_service;
 // lock acquire/release arguments, add any fields you want
 message lock_args {
     int32 client_id = 1;
-    
+    int32 seq = 2;
 }
 
 // server return Status, we will add more in the future
@@ -13,11 +13,13 @@ enum Status {
     SUCCESS = 0;   
     FILE_ERROR = 1; 
     FAILURE = 2;
+    SEQ_ERROR = 3;
 }
 
 // response struct, adjust or add any fields you want
 message Response {
     Status status = 1;
+    int32 seq = 2;
 }
 
 // file append arguments, add any fields you want
@@ -25,11 +27,13 @@ message file_args {
     string filename = 1;
     bytes content = 2;
     int32 client_id = 3;
+    int32 seq = 4;
 }
 
 // field to hold an int, because the arguments and return values should be "message" type
 message Int {
     int32 rc = 1;
+    int32 seq = 2;
 }
 
 service LockService {
