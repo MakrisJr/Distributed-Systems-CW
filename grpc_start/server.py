@@ -6,6 +6,7 @@ from pathlib import Path
 import threading
 import grpc
 import time
+from collections import deque
 
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
@@ -24,14 +25,15 @@ DEBUG = True
 class LockServer(lock_pb2_grpc.LockServiceServicer):
     # track connected clients in a Set
     def __init__(self):
-        self.lock = threading.Lock()
+        # self.lock = threading.Lock()
         self.lock_owner = None
         self.clients = {}
+        self.waiting_list = deque()
         self.seq = 1
 
     def client_init(self, request, context): 
-        client_id = context.peer()
-        self.clients[self.seq] = client_id
+        client_ip = context.peer()
+        self.clients[self.seq] = client_ip
         self.seq += 1
         if DEBUG:
             print("client_init received: " + str(request.rc))
@@ -40,21 +42,29 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         print("lock_acquire received: " + str(request.client_id))
-        if self.lock.acquire(blocking=False):
-            self.lock_owner = request.client_id
-            # print("current lock owner: " + str(self.lock_owner))
-            return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
-        else:
-            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
+
+        self.waiting_list.append(request.client_id)
+
+        while True:
+            if self.waiting_list[0] == request.client_id:
+                # essentially, head of waiting list is always current owner
+                # could, in theory, remove self.lock_owner entirely but this might get confusing real fast
+                self.lock_owner = request.client_id
+
+                return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+            else:
+                time.sleep(0.1)
     
     def lock_release(self, request, context) -> lock_pb2.Response:
         print("lock_release received: " + str(request.client_id))
+        
         if self.lock_owner == request.client_id:
-            self.lock.release()
-            self.lock_owner = None
-            # print("current lock owner: " + str(self.lock_owner))
+            # removes current owner from head of waiting list
+            self.waiting_list.popleft()
+
             return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
         else:
+            # good idea to have this anyhow, as client could call release before ever calling acquire
             return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
     
     def file_append(self, request, context) -> lock_pb2.Response:
@@ -78,14 +88,21 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def client_close(self, request, context):
         # get process id and remove from set
         client_id = request.rc
-        while self.lock_owner == client_id:
-            time.sleep(0.01)
-        del self.clients[client_id]
+
+        # while self.lock_owner == client_id:
+        #     time.sleep(0.01)
+
+        if self.lock_owner == request.client_id:
+            # removes current owner from head of waiting list as before
+            self.waiting_list.popleft()
+
+        if client_id in self.clients: del self.clients[client_id]
+
         if DEBUG:
             print("client_close received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
             print()
-        return lock_pb2.Int(rc=client_id)
+        return lock_pb2.Int(rc=0)
     
 def create_files(n = 100):
     # create directory & files if necessary:
