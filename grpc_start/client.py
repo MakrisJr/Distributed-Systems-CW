@@ -20,7 +20,10 @@ def status_str(x):
         return "Success"
     elif x == 1:
         return "File error"
-    else: return "Failure"
+    elif x == 2: 
+        return "Failure"
+    else: 
+        return "Sequence error"
 
 def RPC_init():
     global id
@@ -59,8 +62,8 @@ def run():
     RPC_init()
     RPC_lock_acquire(1)
     RPC_append_file(2)
-    RPC_lock_release(3)
-    RPC_client_close()
+    # RPC_lock_release(3)
+    # RPC_client_close()
 
 if __name__ == "__main__":
     logging.basicConfig()
