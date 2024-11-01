@@ -1,0 +1,6 @@
+1. fix the client to add functions.
+2. client side timeout and handling, add sequence numbers to avoid duplicate requests. 
+3. server side timeout and handling, it should handle the case where client is dead. Server needs a sequence number for each client. if server receives a request a second time, it should repeat the previous response. 
+4. Clients and servers should have heartbeats to detect if the other side is dead.
+5. Server serialization with lock. Dictionary. 
+

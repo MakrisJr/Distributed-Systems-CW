@@ -30,22 +30,27 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.seq = 1
 
     def client_init(self, request, context): 
-        client_id = context.peer()
-        self.clients[self.seq] = client_id
-        self.seq += 1
+        client_ip = context.peer()
+        client_id = self.seq
+        self.seq+=1
+        client_seq = 1
+        # store client ip and seq
+        self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
         if DEBUG:
             print("client_init received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
-        return lock_pb2.Int(rc=self.seq-1)
+        return lock_pb2.Int(rc=client_id)
     
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         print("lock_acquire received: " + str(request.client_id))
-        if self.lock.acquire(blocking=False):
-            self.lock_owner = request.client_id
-            # print("current lock owner: " + str(self.lock_owner))
+        self.lock.acquire(blocking=True)
+        self.lock_owner = request.client_id
+        time.sleep(1)
+        try:
             return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
-        else:
-            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
+        except Exception as e:
+            print(e)
+            return
     
     def lock_release(self, request, context) -> lock_pb2.Response:
         print("lock_release received: " + str(request.client_id))
@@ -78,9 +83,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def client_close(self, request, context):
         # get process id and remove from set
         client_id = request.rc
-        while self.lock_owner == client_id:
-            time.sleep(0.01)
-        del self.clients[client_id]
+        if client_id in self.clients:
+            while self.lock_owner == client_id:
+                time.sleep(0.01)
+            del self.clients[client_id]
+
         if DEBUG:
             print("client_close received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
