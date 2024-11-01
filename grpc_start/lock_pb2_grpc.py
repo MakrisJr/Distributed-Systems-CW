@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import lock_pb2 as lock__pb2
+from grpc_start import lock_pb2 as grpc__start_dot_lock__pb2
 
 GRPC_GENERATED_VERSION = '1.67.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in lock_pb2_grpc.py depends on'
+        + f' but the generated code in grpc_start/lock_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,28 +36,28 @@ class LockServiceStub(object):
         """
         self.client_init = channel.unary_unary(
                 '/lock_service.LockService/client_init',
-                request_serializer=lock__pb2.Int.SerializeToString,
-                response_deserializer=lock__pb2.Int.FromString,
+                request_serializer=grpc__start_dot_lock__pb2.Int.SerializeToString,
+                response_deserializer=grpc__start_dot_lock__pb2.Int.FromString,
                 _registered_method=True)
         self.lock_acquire = channel.unary_unary(
                 '/lock_service.LockService/lock_acquire',
-                request_serializer=lock__pb2.lock_args.SerializeToString,
-                response_deserializer=lock__pb2.Response.FromString,
+                request_serializer=grpc__start_dot_lock__pb2.lock_args.SerializeToString,
+                response_deserializer=grpc__start_dot_lock__pb2.Response.FromString,
                 _registered_method=True)
         self.lock_release = channel.unary_unary(
                 '/lock_service.LockService/lock_release',
-                request_serializer=lock__pb2.lock_args.SerializeToString,
-                response_deserializer=lock__pb2.Response.FromString,
+                request_serializer=grpc__start_dot_lock__pb2.lock_args.SerializeToString,
+                response_deserializer=grpc__start_dot_lock__pb2.Response.FromString,
                 _registered_method=True)
         self.file_append = channel.unary_unary(
                 '/lock_service.LockService/file_append',
-                request_serializer=lock__pb2.file_args.SerializeToString,
-                response_deserializer=lock__pb2.Response.FromString,
+                request_serializer=grpc__start_dot_lock__pb2.file_args.SerializeToString,
+                response_deserializer=grpc__start_dot_lock__pb2.Response.FromString,
                 _registered_method=True)
         self.client_close = channel.unary_unary(
                 '/lock_service.LockService/client_close',
-                request_serializer=lock__pb2.Int.SerializeToString,
-                response_deserializer=lock__pb2.Int.FromString,
+                request_serializer=grpc__start_dot_lock__pb2.Int.SerializeToString,
+                response_deserializer=grpc__start_dot_lock__pb2.Int.FromString,
                 _registered_method=True)
 
 
@@ -99,28 +99,28 @@ def add_LockServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'client_init': grpc.unary_unary_rpc_method_handler(
                     servicer.client_init,
-                    request_deserializer=lock__pb2.Int.FromString,
-                    response_serializer=lock__pb2.Int.SerializeToString,
+                    request_deserializer=grpc__start_dot_lock__pb2.Int.FromString,
+                    response_serializer=grpc__start_dot_lock__pb2.Int.SerializeToString,
             ),
             'lock_acquire': grpc.unary_unary_rpc_method_handler(
                     servicer.lock_acquire,
-                    request_deserializer=lock__pb2.lock_args.FromString,
-                    response_serializer=lock__pb2.Response.SerializeToString,
+                    request_deserializer=grpc__start_dot_lock__pb2.lock_args.FromString,
+                    response_serializer=grpc__start_dot_lock__pb2.Response.SerializeToString,
             ),
             'lock_release': grpc.unary_unary_rpc_method_handler(
                     servicer.lock_release,
-                    request_deserializer=lock__pb2.lock_args.FromString,
-                    response_serializer=lock__pb2.Response.SerializeToString,
+                    request_deserializer=grpc__start_dot_lock__pb2.lock_args.FromString,
+                    response_serializer=grpc__start_dot_lock__pb2.Response.SerializeToString,
             ),
             'file_append': grpc.unary_unary_rpc_method_handler(
                     servicer.file_append,
-                    request_deserializer=lock__pb2.file_args.FromString,
-                    response_serializer=lock__pb2.Response.SerializeToString,
+                    request_deserializer=grpc__start_dot_lock__pb2.file_args.FromString,
+                    response_serializer=grpc__start_dot_lock__pb2.Response.SerializeToString,
             ),
             'client_close': grpc.unary_unary_rpc_method_handler(
                     servicer.client_close,
-                    request_deserializer=lock__pb2.Int.FromString,
-                    response_serializer=lock__pb2.Int.SerializeToString,
+                    request_deserializer=grpc__start_dot_lock__pb2.Int.FromString,
+                    response_serializer=grpc__start_dot_lock__pb2.Int.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -148,8 +148,8 @@ class LockService(object):
             request,
             target,
             '/lock_service.LockService/client_init',
-            lock__pb2.Int.SerializeToString,
-            lock__pb2.Int.FromString,
+            grpc__start_dot_lock__pb2.Int.SerializeToString,
+            grpc__start_dot_lock__pb2.Int.FromString,
             options,
             channel_credentials,
             insecure,
@@ -175,8 +175,8 @@ class LockService(object):
             request,
             target,
             '/lock_service.LockService/lock_acquire',
-            lock__pb2.lock_args.SerializeToString,
-            lock__pb2.Response.FromString,
+            grpc__start_dot_lock__pb2.lock_args.SerializeToString,
+            grpc__start_dot_lock__pb2.Response.FromString,
             options,
             channel_credentials,
             insecure,
@@ -202,8 +202,8 @@ class LockService(object):
             request,
             target,
             '/lock_service.LockService/lock_release',
-            lock__pb2.lock_args.SerializeToString,
-            lock__pb2.Response.FromString,
+            grpc__start_dot_lock__pb2.lock_args.SerializeToString,
+            grpc__start_dot_lock__pb2.Response.FromString,
             options,
             channel_credentials,
             insecure,
@@ -229,8 +229,8 @@ class LockService(object):
             request,
             target,
             '/lock_service.LockService/file_append',
-            lock__pb2.file_args.SerializeToString,
-            lock__pb2.Response.FromString,
+            grpc__start_dot_lock__pb2.file_args.SerializeToString,
+            grpc__start_dot_lock__pb2.Response.FromString,
             options,
             channel_credentials,
             insecure,
@@ -256,8 +256,8 @@ class LockService(object):
             request,
             target,
             '/lock_service.LockService/client_close',
-            lock__pb2.Int.SerializeToString,
-            lock__pb2.Int.FromString,
+            grpc__start_dot_lock__pb2.Int.SerializeToString,
+            grpc__start_dot_lock__pb2.Int.FromString,
             options,
             channel_credentials,
             insecure,
