@@ -29,19 +29,19 @@ def RPC_init():
     id = response.rc
     print("client_init received: " + str(response.rc))
 
-def RPC_lock_acquire():
+def RPC_lock_acquire(seq):
     # Acquire lock
-    response = stub.lock_acquire(lock_pb2.lock_args(client_id=id))
+    response = stub.lock_acquire(lock_pb2.lock_args(client_id=id, seq=seq))
     print("lock_acquire received: " + status_str(response.status))
 
-def RPC_append_file():
+def RPC_append_file(seq):
     # Append to file
-    response = stub.file_append(lock_pb2.file_args(filename="file_1", content="Hello".encode(), client_id=id))
+    response = stub.file_append(lock_pb2.file_args(filename="file_1", content="Hello".encode(), client_id=id, seq=seq))
     print("file_append received: " + status_str(response.status))
 
-def RPC_lock_release():
+def RPC_lock_release(seq):
     # Release lock
-    response = stub.lock_release(lock_pb2.lock_args(client_id=id))
+    response = stub.lock_release(lock_pb2.lock_args(client_id=id, seq=seq))
     print("lock_release received: " + status_str(response.status))
 
 def RPC_client_close():
@@ -57,9 +57,9 @@ def run():
     print("Will try to greet world ...")
     
     RPC_init()
-    RPC_lock_acquire()
-    RPC_append_file()
-    RPC_lock_release()
+    RPC_lock_acquire(1)
+    RPC_append_file(2)
+    RPC_lock_release(3)
     RPC_client_close()
 
 if __name__ == "__main__":
