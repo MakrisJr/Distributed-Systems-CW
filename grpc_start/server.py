@@ -47,8 +47,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         client_seq = self.clients[client_id]["seq"]
         if request_seq != client_seq:
             return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq = client_seq)
-
-        print("lock_acquire received: " + str(request.client_id))
+        if DEBUG:
+            print("lock_acquire received: " + str(request.client_id))
         self.lock.acquire(blocking=True)
         self.lock_owner = request.client_id
         self.clients[request.client_id]["seq"] += 1
