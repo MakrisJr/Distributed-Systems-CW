@@ -39,20 +39,16 @@ def status_str(x):
 def RPC_init():
     global client_id
 
-    response = stub.client_init(lock_pb2.Int(rc=id))
+    response = stub.client_init(lock_pb2.Int(rc=client_id))
     client_id = response.rc
     print("client_init received: " + str(response.rc))
+    return response.seq
 
 
-def retry_rpc_call(rpc_func, seq, *args, **kwargs):
-    if (client_id, seq) in request_history:
-        print(f"Duplicate request detected for seq {seq}. Returning stored response.")
-        return request_history[(client_id, seq)]
-
+def retry_rpc_call(rpc_func, *args, **kwargs):
     for attempt in range(RETRY_LIMIT):
         try:
             response = rpc_func(*args, **kwargs)
-            request_history[(client_id, seq)] = response
             return response
         except grpc.RpcError as e:
             print(
@@ -67,10 +63,9 @@ def retry_rpc_call(rpc_func, seq, *args, **kwargs):
 def RPC_keep_alive():
     """Send periodic keep-alive messages to the server to maintain lock ownership."""
     global keep_alive_running
-    seq = 1
     while keep_alive_running:
         response = retry_rpc_call(
-            stub.lock_acquire, seq, lock_pb2.lock_args(client_id=client_id, seq=seq)
+            stub.keep_alive, lock_pb2.lock_args(client_id=client_id)
         )
         if response:
             print("Keep-alive sent, status: " + status_str(response.status))
@@ -97,42 +92,52 @@ def stop_keep_alive():
 
 def RPC_lock_acquire(seq):
     response = retry_rpc_call(
-        stub.lock_acquire, seq, lock_pb2.lock_args(client_id=client_id, seq=seq)
+        stub.lock_acquire,
+        lock_pb2.lock_args(client_id=client_id, seq=seq),
     )
     if response and response.status == lock_pb2.Status.SUCCESS:
         print("lock_acquire received: " + status_str(response.status))
         start_keep_alive()
+        return response.seq
     else:
         print("Failed to acquire lock after retries.")
+        return seq
 
 
 def RPC_append_file(seq):
     response = retry_rpc_call(
         stub.file_append,
-        seq,
         lock_pb2.file_args(
-            filename="file_1", content="Hello".encode(), client_id=client_id, seq=seq
+            filename="file_1",
+            content="Hello".encode(),
+            client_id=client_id,
+            seq=seq,
         ),
     )
     if response:
         print("file_append received: " + status_str(response.status))
+        return response.seq
     else:
         print("Failed to append to file after retries.")
+        return seq
 
 
 def RPC_lock_release(seq):
     response = retry_rpc_call(
-        stub.lock_release, seq, lock_pb2.lock_args(client_id=client_id, seq=seq)
+        stub.lock_release,
+        lock_pb2.lock_args(client_id=client_id, seq=seq),
     )
     if response and response.status == lock_pb2.Status.SUCCESS:
         print("lock_release received: " + status_str(response.status))
         stop_keep_alive()
+        return response.seq
     else:
         print("Failed to release lock after retries.")
+        return seq
 
 
 def RPC_client_close():
-    response = retry_rpc_call(stub.client_close, 0, lock_pb2.Int(rc=client_id))
+    response = retry_rpc_call(stub.client_close, lock_pb2.Int(rc=client_id))
     if response:
         print("client_close received: " + str(response.rc))
     else:
@@ -145,10 +150,10 @@ def run():
     # of the code.
     print("Will try to greet world ...")
 
-    RPC_init()
-    RPC_lock_acquire(1)
-    RPC_append_file(2)
-    RPC_lock_release(3)
+    seq = RPC_init()
+    seq = RPC_lock_acquire(seq)
+    seq = RPC_append_file(seq)
+    seq = RPC_lock_release(seq)
     RPC_client_close()
 
 

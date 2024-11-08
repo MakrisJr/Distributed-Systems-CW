@@ -42,4 +42,5 @@ service LockService {
     rpc lock_release(lock_args) returns (Response);
     rpc file_append(file_args) returns (Response);
     rpc client_close(Int) returns (Int);
+    rpc keep_alive(lock_args) returns (Response);
 }

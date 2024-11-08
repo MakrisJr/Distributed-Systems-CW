@@ -83,7 +83,10 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_owner is None:
             self.lock_owner = client_id
             self.start_lock_timer()
-            return lock_pb2.Response(status=lock_pb2.Status.SUCCESS, seq=client_seq + 1)
+            self.clients[client_id]["seq"] += 1
+            return lock_pb2.Response(
+                status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
+            )
 
         self.waiting_list.append(request.client_id)
 
@@ -113,7 +116,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.clients[client_id]["seq"] += 1
         if self.lock_owner == request.client_id:
             # removes current owner from head of waiting list
-            self.waiting_list.popleft()
+            if self.waiting_list:
+                self.waiting_list.popleft()
             self.lock_owner = None
             if self.lock_timer:
                 self.lock_timer.cancel()
@@ -175,9 +179,14 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if client_id == self.lock_owner:
             print(f"Keep-alive received from client {client_id}. Resetting lock timer.")
             self.start_lock_timer()
-            return lock_pb2.Response(status=lock_pb2.Status.SUCCESS)
+            self.clients[client_id]["seq"] += 1
+            return lock_pb2.Response(
+                status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
+            )
         else:
-            return lock_pb2.Response(status=lock_pb2.Status.FAILURE)
+            return lock_pb2.Response(
+                status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]
+            )
 
     def client_close(self, request, context):
         # get process id and remove from set
