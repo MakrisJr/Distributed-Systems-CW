@@ -1,0 +1,149 @@
+import sys
+import threading
+import time
+from pathlib import Path
+
+root_directory = Path(__file__).resolve().parent.parent
+sys.path.append(str(root_directory))
+
+from grpc_start.client import Client
+from grpc_start.server import LockServer, reset_files
+
+FILE_PATH = "files/"
+
+
+def test_packet_delay():
+    client1 = Client()
+    client2 = Client()
+
+    server = LockServer()
+
+    server.serve()
+    print("Server started")
+    # test packet delay
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    time.sleep(5)
+
+    client1.RPC_append_file("0", "test1client1")
+
+    # terminate thread one with a keyboard interrupt
+
+    if thread2.is_alive():
+        thread2.join()
+
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "test1client1":
+        return False
+    return True
+    # expected result: client1 receives LOCK_EXPIRED, client2 has the lock and message is not written to file
+
+
+def test_client_packet_loss():
+    # since we are using TCP, the only way to simulate packet drop is to delay the packet until the client times out.
+    client1 = Client()
+    client2 = Client()
+
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+
+    print("Server started")
+    # test packet delay
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client2.RPC_lock_acquire()
+    time.sleep(0.1)
+
+    thread1 = threading.Thread(target=client1.RPC_lock_acquire)
+    thread1.start()
+
+    client2.RPC_append_file("0", "B")
+    client2.RPC_lock_release()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
+
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "BA":
+        return True
+    return False
+    # c2 gets the lock, appends 'B', c1 gets lock, writes 'A'
+
+
+def test_server_packet_loss():
+    client1 = Client()
+    client2 = Client()
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    # sends lock_acquire again
+    client1.RPC_lock_acquire()
+
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
+
+    thread2.join()
+    client2.RPC_append_file("0", "B")
+    client2.RPC_lock_release()
+
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "AB":
+        return True
+    return False
+
+
+if __name__ == "__main__":
+    # run all tests
+    failed_tests = []
+    if not test_packet_delay():
+        failed_tests.append("test_packet_delay")
+        print("test_packet_delay failed")
+
+    if not test_client_packet_loss():
+        failed_tests.append("test_client_packet_loss")
+        print("test_client_packet_loss failed")
+
+    if not test_server_packet_loss():
+        failed_tests.append("test_server_packet_loss")
+        print("test_server_packet_loss failed")
+
+    if len(failed_tests) == 0:
+        print("All tests passed")
+    else:
+        print(f"Failed tests: {failed_tests}")
