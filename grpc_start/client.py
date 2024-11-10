@@ -45,10 +45,12 @@ class Client:
             if DEBUG:
                 print("client_init: " + str(response.rc))
             self.request_history[self.seq - 1] = "client_init"
-            return
+            return True
         except grpc.RpcError as e:
-            print(f"RPC call client init failed with error: {e}")
-            return
+            print(
+                f"Client {self.client_id}: RPC call client init failed with error: {e}"
+            )
+            return False
 
     def retry_rpc_call(self, rpc_func, *args, **kwargs):
         for attempt in range(RETRY_LIMIT):
@@ -57,11 +59,11 @@ class Client:
                 return response
             except grpc.RpcError as e:
                 print(
-                    f"RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
+                    f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
                 time.sleep(RETRY_DELAY)
 
-        print("Failed to receive response after retries.")
+        print(f"Client {self.client_id}: Failed to receive response after retries.")
         return None
 
     def RPC_lock_acquire(self):
@@ -70,12 +72,15 @@ class Client:
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
-            print("lock_acquire received: " + status_str(response.status))
+            print(
+                f"Client {self.client_id}: lock_acquire received: "
+                + status_str(response.status)
+            )
             self.seq = response.seq
             self.request_history[self.seq] = "lock_acquire"
             return True
         else:
-            print("Failed to acquire lock after retries.")
+            print(f"Client {self.client_id}: Failed to acquire lock after retries.")
             return False
 
     def RPC_append_file(self, file_number, text):
@@ -89,15 +94,23 @@ class Client:
             ),
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
-            print("file_append received: " + status_str(response.status))
+            print(
+                f"Client {self.client_id}: file_append received: "
+                + status_str(response.status)
+            )
             self.request_history[self.seq] = ("file_append", file_number, text)
             self.seq += 1
             return True
         elif response and response.status == lock_pb2.Status.SEQ_ERROR:
-            print("Sequence error. Need to recover.")
+            print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            return False
+        elif response and response.status == lock_pb2.Status.LOCK_EXPIRED:
+            print(f"Client {self.client_id}: Lock expired. Need to recover.")
             return False
         else:
-            print(f"Failed to append file after {RETRY_LIMIT} retries.")
+            print(
+                f"Client {self.client_id}: Failed to append file after {RETRY_LIMIT} retries."
+            )
             return False
 
     def RPC_lock_release(self):
@@ -106,12 +119,15 @@ class Client:
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
-            print("lock_release received: " + status_str(response.status))
+            print(
+                f"Client {self.client_id}: lock_release received: "
+                + status_str(response.status)
+            )
             self.seq = response.seq
             self.request_history[self.seq] = "lock_release"
             return True
         else:
-            print("Failed to release lock after retries.")
+            print(f"Client {self.client_id}: Failed to release lock after retries.")
             return False
 
     def RPC_client_close(self):
@@ -119,34 +135,37 @@ class Client:
             stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
-            print("client_close received: " + status_str(response.status))
+            print(
+                f"Client {self.client_id}: client_close received: "
+                + status_str(response.status)
+            )
             self.request_history[self.seq] = "client_close"
             self.seq = response.seq
             return True
         elif response and response.status == lock_pb2.Status.SEQ_ERROR:
-            print("Sequence error. Need to recover.")
+            print(f"Client {self.client_id}: Sequence error. Need to recover.")
             return False
         else:
-            print("Failed to close client after retries.")
+            print(f"Client {self.client_id}: Failed to close client after retries.")
             return False
 
     #
 
 
-def run():
-    # NOTE(gRPC Python Team): .close() is possible on a channel and should be
-    # used in circumstances in which the with statement does not fit the needs
-    # of the code.
-    print("Will try to greet world ...")
+# def run():
+#     # NOTE(gRPC Python Team): .close() is possible on a channel and should be
+#     # used in circumstances in which the with statement does not fit the needs
+#     # of the code.
+#     print("Will try to greet world ...")
 
-    client = Client()
-    client.RPC_client_init()
-    client.RPC_lock_acquire()
-    client.RPC_append_file(1, "Hello, world!")
-    client.RPC_lock_release()
-    client.RPC_client_close()
+#     client = Client()
+#     client.RPC_client_init()
+#     client.RPC_lock_acquire()
+#     client.RPC_append_file(1, "Hello, world!")
+#     client.RPC_lock_release()
+#     client.RPC_client_close()
 
 
 if __name__ == "__main__":
     logging.basicConfig()
-    run()
+    # run()
