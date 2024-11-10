@@ -128,6 +128,55 @@ def test_server_packet_loss():
     return False
 
 
+def test_duplicated_packets():
+    # duplicated lock_release shall not release other clients' locks
+    client1 = Client()
+    client2 = Client()
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
+
+    time.sleep(0.1)
+    result = client1.RPC_lock_release()
+    if result:
+        return False
+
+    thread2.join()
+    client2.RPC_append_file("0", "B")
+
+    thread1 = threading.Thread(target=client1.RPC_lock_acquire)
+    thread1.start()
+
+    client2.RPC_append_file("0", "B")
+    client2.RPC_lock_release()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "ABBA":
+        return True
+    return False
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
@@ -142,6 +191,10 @@ if __name__ == "__main__":
     if not test_server_packet_loss():
         failed_tests.append("test_server_packet_loss")
         print("test_server_packet_loss failed")
+
+    if not test_duplicated_packets():
+        failed_tests.append("test_duplicated_packets")
+        print("test_duplicated_packets failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")

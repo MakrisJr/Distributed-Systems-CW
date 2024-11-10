@@ -135,11 +135,10 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         print("lock_release received: " + str(request.client_id))
 
-        self.clients[client_id]["seq"] += 1
         if self.lock_owner == request.client_id:
             self.grant_lock_to_next_client()
             # resets timer, as this is a call from the current lock owner, proving that client is alive
-
+            self.clients[client_id]["seq"] += 1
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
