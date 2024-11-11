@@ -4,18 +4,28 @@ package raft_service;
 
 // mimicking the structure of self.appends in server.py
 // one 'entry' consists of a filename, and the bytes to append
-message LogEntry {
+
+message FileChangeLogEntry {
     int32 term = 1; // term when entry was received by leader
     string filename = 2;
     bytes content = 3;
+}
+
+message WaitingListLogEntry {
+    int32 term = 1; // term when entry was received by leader
+    repeated int32 client_ids = 2; // send the WHOLE LIST to followers every time it's changed
 }
 
 message AppendArgs{
     int32 term = 1; // leader's term
     int32 leaderID = 2; // so follower can redirect clients
     int32 prevLogIndex = 3; // index of log entry immediately preceding new ones
-    repeated LogEntry entries = 4; // log entries to store (empty for heartbeat)
-    int32 leaderCommit = 5; // leader's commitIndex
+
+    // log entries to store (empty for heartbeat)
+    repeated FileChangeLogEntry file_entries = 4; 
+    repeated WaitingListLogEntry list_entries = 5;
+
+    int32 leaderCommit = 6; // leader's commitIndex
 }
 
 message ReqVoteArgs{
