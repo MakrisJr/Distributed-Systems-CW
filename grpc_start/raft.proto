@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package raft_service;
+
+// mimicking the structure of self.appends in server.py
+// one 'entry' consists of a filename, and the bytes to append
+message LogEntry {
+    int32 term = 1; // term when entry was received by leader
+    string filename = 2;
+    bytes content = 3;
+}
+
+message AppendArgs{
+    int32 term = 1; // leader's term
+    int32 leaderID = 2; // so follower can redirect clients
+    int32 prevLogIndex = 3; // index of log entry immediately preceding new ones
+    repeated LogEntry entries = 4; // log entries to store (empty for heartbeat)
+    int32 leaderCommit = 5; // leader's commitIndex
+}
+
+message ReqVoteArgs{
+    int32 term = 1; // candidate's term
+    int32 candidateID = 2; // ID of candidate requesting vote
+    int32 lastLogIndex = 3; // index of candidate's last log entry
+    int32 lastLogTerm = 4; // term of candidate's last log entry
+}
+
+message AppendResponse {
+    int32 term = 1; // current term, for leader to update itself
+    bool success = 2; // true if follower contained entry matching prevLogIndex and prevLogTerm
+}
+
+message ReqVoteResponse {
+    int32 term = 1; // current term, for candidate to update itself
+    bool voteGranted = 2; // true if candidate received vote
+}
+
+service RaftService {
+    rpc append_entries(AppendArgs) returns (AppendResponse);
+    rpc request_vote(ReqVoteArgs) returns (ReqVoteResponse);
+}
