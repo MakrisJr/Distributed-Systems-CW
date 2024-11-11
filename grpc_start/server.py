@@ -33,8 +33,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.waiting_list = deque()
         self.seq = 1
 
+        self.appends = deque()
+
         self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock)
-        self.lock_timer.start()
 
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
@@ -50,6 +51,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             self.lock_owner = None
             if self.waiting_list:
                 self.grant_lock_to_next_client()
+
+            self.appends = deque() # delete any append operations that weren't carried out 
 
     def grant_lock_to_next_client(self):
         """Grant the lock to the next client in the queue."""
@@ -70,13 +73,26 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             print("client_init received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
         return lock_pb2.Int(rc=client_id, seq=client_seq)
+    
+    def check_client_seq(self, client_id, request_seq) -> lock_pb2.Response:
+        if client_id in self.clients:
+            client_seq = self.clients[client_id]["seq"]
+            if request_seq != client_seq:
+                return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq=client_seq)
+            else: 
+                return None # no error here, carry on
+        else: 
+            return lock_pb2.Response(status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
         request_seq = request.seq
+
+        check_response = self.check_client_seq(client_id, request_seq)
+        if check_response:
+            return check_response
+        
         client_seq = self.clients[client_id]["seq"]
-        if request_seq != client_seq:
-            return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq=client_seq)
 
         print("lock_acquire received: " + str(request.client_id))
 
@@ -107,9 +123,10 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def lock_release(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
         request_seq = request.seq
-        client_seq = self.clients[client_id]["seq"]
-        if request_seq != client_seq:
-            return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq=client_seq)
+
+        check_response = self.check_client_seq(client_id, request_seq)
+        if check_response:
+            return check_response
 
         print("lock_release received: " + str(request.client_id))
 
@@ -128,6 +145,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             # resets timer, as this is a call from the current lock owner, proving that client is alive
             self.start_lock_timer()
 
+            # execute all stashed changes to files - this also removes all append entries
+            while self.appends:
+                file_path, bytes = self.appends.popleft()
+
+                with open(file_path, "ab") as file:
+                    file.write(bytes)
+
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
@@ -140,10 +164,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def file_append(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
         request_seq = request.seq
-        client_seq = self.clients[client_id]["seq"]
-        if request_seq != client_seq:
-            return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq=client_seq)
 
+        check_response = self.check_client_seq(client_id, request_seq)
+        if check_response:
+            return check_response
+        
         print("file_append received: " + str(request.filename))
         print("Lock owner" + str(self.lock_owner))
         print("Client ID" + str(request.client_id))
@@ -157,12 +182,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             file_path = f"./files/{filename}"
 
             if os.path.isfile(file_path):
-                with open(file_path, "ab") as file:
-                    file.write(request.content)
-                    return lock_pb2.Response(
-                        status=lock_pb2.Status.SUCCESS,
-                        seq=self.clients[client_id]["seq"],
-                    )
+                # add file append operation to appends queue
+                self.appends.append((file_path, request.content))
+
+                return lock_pb2.Response(
+                    status=lock_pb2.Status.SUCCESS,
+                    seq=self.clients[client_id]["seq"],
+                )
             else:
                 return lock_pb2.Response(
                     status=lock_pb2.Status.FILE_ERROR,
