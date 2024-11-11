@@ -26,14 +26,18 @@ keep_alive_running = False
 
 
 def status_str(x):
-    if x == 0:
-        return "Success"
-    elif x == 1:
-        return "File error"
-    elif x == 2:
-        return "Failure"
+    status_strings = [
+        "Success",
+        "File error - not found",
+        "Failure",
+        "Sequence error",
+        "Didn't call client_init",
+    ]
+
+    if x < len(status_strings):
+        return status_strings[x]
     else:
-        return "Sequence error"
+        raise Exception("Not a valid status integer")
 
 
 def RPC_init():

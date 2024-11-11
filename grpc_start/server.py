@@ -52,7 +52,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             if self.waiting_list:
                 self.grant_lock_to_next_client()
 
-            self.appends = deque() # delete any append operations that weren't carried out 
+            self.appends = (
+                deque()
+            )  # delete any append operations that weren't carried out
 
     def grant_lock_to_next_client(self):
         """Grant the lock to the next client in the queue."""
@@ -73,16 +75,21 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             print("client_init received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
         return lock_pb2.Int(rc=client_id, seq=client_seq)
-    
+
     def check_client_seq(self, client_id, request_seq) -> lock_pb2.Response:
+        """Check if a) the client has called client_init beforehand, and b) if the request is a duplicate or not"""
         if client_id in self.clients:
             client_seq = self.clients[client_id]["seq"]
             if request_seq != client_seq:
-                return lock_pb2.Response(status=lock_pb2.Status.SEQ_ERROR, seq=client_seq)
-            else: 
-                return None # no error here, carry on
-        else: 
-            return lock_pb2.Response(status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq)
+                return lock_pb2.Response(
+                    status=lock_pb2.Status.SEQ_ERROR, seq=client_seq
+                )
+            else:
+                return None  # no error here, carry on
+        else:
+            return lock_pb2.Response(
+                status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq
+            )
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
@@ -91,7 +98,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         check_response = self.check_client_seq(client_id, request_seq)
         if check_response:
             return check_response
-        
+
         client_seq = self.clients[client_id]["seq"]
 
         print("lock_acquire received: " + str(request.client_id))
@@ -168,7 +175,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         check_response = self.check_client_seq(client_id, request_seq)
         if check_response:
             return check_response
-        
+
         print("file_append received: " + str(request.filename))
         print("Lock owner" + str(self.lock_owner))
         print("Client ID" + str(request.client_id))
