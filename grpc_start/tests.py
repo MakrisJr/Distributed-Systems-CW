@@ -19,6 +19,7 @@ def test_packet_delay():
     server = LockServer()
 
     server.serve()
+    reset_files()
     print("Server started")
     # test packet delay
     client1.RPC_client_init()
@@ -43,7 +44,7 @@ def test_packet_delay():
     with open(f"{FILE_PATH}file_0", "r") as file:
         message = file.read()
 
-    if message == "test1client1":
+    if not message == "":
         return False
     return True
     # expected result: client1 receives LOCK_EXPIRED, client2 has the lock and message is not written to file
@@ -144,14 +145,19 @@ def test_duplicated_packets():
     client1.RPC_lock_acquire()
     thread2 = threading.Thread(target=client2.RPC_lock_acquire)
     thread2.start()
-
-    client1.RPC_append_file("0", "A")
+    print(f"Client 1 seq: {client1.seq}")
+    client1.RPC_append_file("0", "A", lost_after_server=True)
+    print(f"Client 1 seq: {client1.seq}")
+    client1.RPC_append_file("0", "A")  # fails because of wrong SEQ number
+    print(f"Client 1 seq: {client1.seq}")
+    # send duplicated lock_release
     client1.RPC_lock_release()
-
+    print(f"Client 1 seq: {client1.seq}")
     time.sleep(0.1)
     result = client1.RPC_lock_release()
     if result:
         return False
+    print(f"Client 1 seq: {client1.seq}")
 
     thread2.join()
     client2.RPC_append_file("0", "B")
@@ -177,6 +183,100 @@ def test_duplicated_packets():
     return False
 
 
+def test_combined_network_failures():
+    # test combined network failures
+    client1 = Client()
+    client2 = Client()
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    client1.RPC_append_file("0", "1")
+    client1.RPC_append_file(
+        "0", "A", lost_before_server=True
+    )  # lost before reaching server
+    client1.RPC_append_file("0", "A", lost_after_server=True)  # response is lost
+    client1.RPC_append_file("0", "A")  # will have the previous SEQ number
+
+    client1.RPC_lock_release()
+
+    thread2.join()
+    client2.RPC_append_file("0", "B")
+
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "1AB":
+        return True
+    return False
+
+
+# CLIENT FAILS/STUCK:
+
+
+def test_stuck_before_editing_file():
+    client1 = Client()
+    client2 = Client()
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.print_seq()
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    # garbage collection, client1 loses lock
+    thread2.join()
+    client1.print_seq()
+    client2.RPC_append_file("0", "B")
+    client1.print_seq()
+    client1.RPC_append_file("0", "A")  # lock expired
+    client1.print_seq()
+    client2.RPC_append_file("0", "B")
+
+    thread1 = threading.Thread(target=client1.RPC_lock_acquire)
+    thread1.start()
+    client1.print_seq()
+    client2.RPC_lock_release()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+    client1.print_seq()
+    client1.RPC_append_file("0", "A")
+    client1.print_seq()
+
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "BBAA":
+        return True
+    print(message)
+    return False
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
@@ -195,6 +295,14 @@ if __name__ == "__main__":
     if not test_duplicated_packets():
         failed_tests.append("test_duplicated_packets")
         print("test_duplicated_packets failed")
+
+    if not test_combined_network_failures():
+        failed_tests.append("test_combined_network_failures")
+        print("test_combined_network_failures failed")
+
+    if not test_stuck_before_editing_file():
+        failed_tests.append("test_stuck_before_editing_file")
+        print("test_stuck_before_editing_file failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")

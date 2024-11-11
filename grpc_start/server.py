@@ -143,6 +143,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
         else:
+            self.clients[client_id]["seq"] += 1
             # good idea to have this anyhow, as client could call release before ever calling acquire
             return lock_pb2.Response(
                 status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]

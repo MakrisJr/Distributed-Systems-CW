@@ -63,7 +63,9 @@ class Client:
                 )
                 time.sleep(RETRY_DELAY)
 
-        print(f"Client {self.client_id}: Failed to receive response after retries.")
+        print(
+            f"Client {self.client_id}: RETRY_RPC_CALL: Failed to receive response after retries."
+        )
         return None
 
     def RPC_lock_acquire(self):
@@ -71,6 +73,9 @@ class Client:
             stub.lock_acquire,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
+        if response and response.status == lock_pb2.Status.SEQ_ERROR:
+            print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            return False
         if response and response.status == lock_pb2.Status.SUCCESS:
             print(
                 f"Client {self.client_id}: lock_acquire received: "
@@ -80,10 +85,17 @@ class Client:
             self.request_history[self.seq] = "lock_acquire"
             return True
         else:
-            print(f"Client {self.client_id}: Failed to acquire lock after retries.")
+            print(f"Client {self.client_id}: Failed. Status: {response.status}")
             return False
 
-    def RPC_append_file(self, file_number, text):
+    def RPC_append_file(
+        self, file_number, text, lost_before_server=False, lost_after_server=False
+    ):
+        if lost_before_server:  # simulate packet loss
+            if DEBUG:
+                print(f"Client {self.client_id}: Simulating packet loss.")
+            return False
+
         response = self.retry_rpc_call(
             stub.file_append,
             lock_pb2.file_args(
@@ -93,24 +105,35 @@ class Client:
                 seq=self.seq,
             ),
         )
+        if lost_after_server:
+            return False
         if response and response.status == lock_pb2.Status.SUCCESS:
             print(
                 f"Client {self.client_id}: file_append received: "
                 + status_str(response.status)
             )
             self.request_history[self.seq] = ("file_append", file_number, text)
-            self.seq += 1
+            self.seq = response.seq
             return True
         elif response and response.status == lock_pb2.Status.SEQ_ERROR:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            if DEBUG:
+                print(
+                    f"Client {self.client_id}: seq={self.seq}, response.seq={response.seq}"
+                )
+            if response.seq > self.seq:
+                # the server has processed the request already and updated the sequence number, but was lost on the way back
+                self.seq = response.seq
             return False
         elif response and response.status == lock_pb2.Status.LOCK_EXPIRED:
             print(f"Client {self.client_id}: Lock expired. Need to recover.")
+            self.seq = response.seq
             return False
-        else:
+        else:  # response and response.status == lock_pb2.Status.FILE_ERROR:
             print(
                 f"Client {self.client_id}: Failed to append file after {RETRY_LIMIT} retries."
             )
+            self.seq = response.seq
             return False
 
     def RPC_lock_release(self):
@@ -126,7 +149,11 @@ class Client:
             self.seq = response.seq
             self.request_history[self.seq] = "lock_release"
             return True
-        else:
+        elif response and response.status == lock_pb2.Status.SEQ_ERROR:
+            print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            return False
+        else:  # response and response.status == lock_pb2.Status.FAILURE:
+            self.seq = response.seq
             print(f"Client {self.client_id}: Failed to release lock after retries.")
             return False
 
@@ -146,6 +173,7 @@ class Client:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
             return False
         else:
+            self.seq = response.seq
             print(f"Client {self.client_id}: Failed to close client after retries.")
             return False
 
