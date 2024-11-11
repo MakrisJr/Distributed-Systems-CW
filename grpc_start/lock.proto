@@ -14,7 +14,8 @@ enum Status {
     FILE_ERROR = 1; 
     FAILURE = 2;
     SEQ_ERROR = 3;
-    LOCK_EXPIRED = 4;
+    CLIENT_NOT_INIT = 4;
+    LOCK_EXPIRED = 5;
 }
 
 // response struct, adjust or add any fields you want
