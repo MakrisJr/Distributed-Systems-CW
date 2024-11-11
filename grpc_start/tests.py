@@ -170,6 +170,7 @@ def test_duplicated_packets():
 
     thread1.join()
     client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
 
     time.sleep(0.5)
     server.stop()
@@ -211,6 +212,7 @@ def test_combined_network_failures():
 
     thread2.join()
     client2.RPC_append_file("0", "B")
+    client2.RPC_lock_release()
 
     time.sleep(0.5)
     server.stop()
@@ -239,30 +241,24 @@ def test_stuck_before_editing_file():
     client1.RPC_client_init()
     client2.RPC_client_init()
 
-    client1.print_seq()
     client1.RPC_lock_acquire()
     thread2 = threading.Thread(target=client2.RPC_lock_acquire)
     thread2.start()
 
     # garbage collection, client1 loses lock
     thread2.join()
-    client1.print_seq()
     client2.RPC_append_file("0", "B")
-    client1.print_seq()
     client1.RPC_append_file("0", "A")  # lock expired
-    client1.print_seq()
     client2.RPC_append_file("0", "B")
 
     thread1 = threading.Thread(target=client1.RPC_lock_acquire)
     thread1.start()
-    client1.print_seq()
     client2.RPC_lock_release()
 
     thread1.join()
     client1.RPC_append_file("0", "A")
-    client1.print_seq()
     client1.RPC_append_file("0", "A")
-    client1.print_seq()
+    client1.RPC_lock_release()
 
     time.sleep(0.5)
     server.stop()
