@@ -273,6 +273,51 @@ def test_stuck_before_editing_file():
     return False
 
 
+def test_stuck_after_editing_file():
+    client1 = Client()
+    client2 = Client()
+    server = LockServer()
+
+    server.serve()
+    reset_files()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    client1.RPC_append_file("0", "A", lost_after_server=True)
+    # garbage collection happens
+    thread2.join()
+    # client2 gets the lock. client 1's append is lost
+    client2.RPC_append_file("0", "B")
+    client1.RPC_append_file("0", "A")  # lock expired
+
+    client2.RPC_append_file("0", "B")
+
+    thread1 = threading.Thread(target=client1.RPC_lock_acquire)
+    thread1.start()
+    client2.RPC_lock_release()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
+    time.sleep(0.5)
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{FILE_PATH}file_0", "r") as file:
+        message = file.read()
+
+    if message == "BBAA":
+        return True
+    return False
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
@@ -299,6 +344,10 @@ if __name__ == "__main__":
     if not test_stuck_before_editing_file():
         failed_tests.append("test_stuck_before_editing_file")
         print("test_stuck_before_editing_file failed")
+
+    if not test_stuck_after_editing_file():
+        failed_tests.append("test_stuck_after_editing_file")
+        print("test_stuck_after_editing_file failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")
