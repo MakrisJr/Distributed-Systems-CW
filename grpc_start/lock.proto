@@ -14,6 +14,7 @@ enum Status {
     FILE_ERROR = 1; 
     FAILURE = 2;
     SEQ_ERROR = 3;
+    LOCK_EXPIRED = 4;
 }
 
 // response struct, adjust or add any fields you want
@@ -32,8 +33,10 @@ message file_args {
 
 // field to hold an int, because the arguments and return values should be "message" type
 message Int {
-    int32 rc = 1;
-    int32 seq = 2;
+    Status status = 1;
+    int32 rc = 2;
+    int32 seq = 3;
+
 }
 
 service LockService {
@@ -42,5 +45,4 @@ service LockService {
     rpc lock_release(lock_args) returns (Response);
     rpc file_append(file_args) returns (Response);
     rpc client_close(Int) returns (Int);
-    rpc keep_alive(lock_args) returns (Response);
 }
