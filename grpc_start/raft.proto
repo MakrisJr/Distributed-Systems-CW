@@ -6,24 +6,20 @@ package raft_service;
 
 // add client to self.clients
 message AddClientCommand {
-    int32 client_id = 2;
+    int32 client_id = 1;
 }
 
-// add client to lock waiting list
-message AddToWaitingListCommand {
-    int32 client_id = 2;
+message ChangeLockHolderCommand {
+    int32 client_id = 1;
 }
-
-// remove client from head of waiting list
-message RemoveHeadWaitingListCommand {}
 
 // increment ID assigned to new clients
 message IncrementNewClientIDCommand {}
 
 // add a file append operation to local queue of appends
 message AddAppendCommand {
-    string filename = 2;
-    bytes content = 3;
+    string filename = 1;
+    bytes content = 2;
 }
 
 // execute all appends in queue
@@ -35,11 +31,10 @@ message LogEntry {
     // only one command per log entry!
     oneof command {
         AddClientCommand add_client = 2;
-        AddToWaitingListCommand add_waiting_list = 3;
-        RemoveHeadWaitingListCommand remove_head_waiting_list = 4;
-        IncrementNewClientIDCommand increment_new_client = 5;
-        AddAppendCommand add_append = 6;
-        ExecuteAppendsCommand execute_appends = 7;
+        ChangeLockHolderCommand change_lock_holder = 3;
+        IncrementNewClientIDCommand increment_new_client = 4;
+        AddAppendCommand add_append = 5;
+        ExecuteAppendsCommand execute_appends = 6;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }

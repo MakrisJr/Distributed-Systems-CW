@@ -33,3 +33,12 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         # return super().request_vote(request, context)
     
         raise NotImplementedError
+    
+    # this is where this server calls the request_vote rpc on other servers
+    def send_request_vote(self):
+        raise NotImplementedError
+    
+    # this is where this server calls the append_entries rpc on other servers
+    def send_append_entries(self):
+        if self.state == RaftServerState.LEADER:
+            raise NotImplementedError
