@@ -1,12 +1,13 @@
-import grpc
+from enum import Enum
 
 from grpc_start import raft_pb2, raft_pb2_grpc  # noqa: F401
-from enum import Enum
+
 
 class RaftServerState(Enum):
     LEADER = 1
     FOLLOWER = 2
     CANDIDATE = 3
+
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def __init__(self):
@@ -20,7 +21,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.next_index = 0
         self.match_index = 0
 
-        self.state = RaftServerState.CANDIDATE # placeholder
+        self.state = RaftServerState.CANDIDATE  # placeholder
 
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entries(self, request, context):
@@ -31,13 +32,13 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def request_vote(self, request, context):
         # return super().request_vote(request, context)
-    
+
         raise NotImplementedError
-    
+
     # this is where this server calls the request_vote rpc on other servers
     def send_request_vote(self):
         raise NotImplementedError
-    
+
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entries(self):
         if self.state == RaftServerState.LEADER:

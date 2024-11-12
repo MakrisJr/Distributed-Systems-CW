@@ -26,15 +26,21 @@ LOCK_TIMEOUT = 4
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
     def __init__(self):
-        self.lock_owner = None # does not need to be synced independently; always equal to waiting_list[0]
+        self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
-        self.clients = {} # needs to be synced - 'add client' action, 'increment client's expected seq number' action
-        self.waiting_list = deque() # needs to be synced - 'add', 'remove client id' action
-        self.newClientId = 1 # needs to be synced - 'increment' action
-        self.appends = deque() # needs to be synced - 'add operation' action, 'execute all' action
+        self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
+        self.waiting_list = (
+            deque()
+        )  # needs to be synced - 'add', 'remove client id' action
+        self.newClientId = 1  # needs to be synced - 'increment' action
+        self.appends = (
+            deque()
+        )  # needs to be synced - 'add operation' action, 'execute all' action
         # so any time any of these change, it's a log entry
 
-        self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock) # would be difficult and stupid to sync
+        self.lock_timer = threading.Timer(
+            LOCK_TIMEOUT, self.force_release_lock
+        )  # would be difficult and stupid to sync
         # lock timer DOES NOT GET STARTED NOW: only starts with the very first call to lock_acquire
 
     def start_lock_timer(self):
@@ -268,7 +274,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
 def create_files(n=100):
     # needs to be modified to account for multiple servers
-    
+
     # create directory & files if necessary:
     if not os.path.exists("./files"):
         os.makedirs("./files")
@@ -286,7 +292,7 @@ def reset_files(n=100):
 
 
 if __name__ == "__main__":
-    create_files() # presumably the server object should do this, rather than it being randomly outside??
+    create_files()  # presumably the server object should do this, rather than it being randomly outside??
     logging.basicConfig()
     server = LockServer()
     server.serve()

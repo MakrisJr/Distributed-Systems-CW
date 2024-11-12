@@ -27,7 +27,7 @@ def status_str(x):
         "Failure",
         "Sequence error",
         "Didn't call client_init",
-        "Lock expired"
+        "Lock expired",
     ]
 
     if x < len(status_strings):
