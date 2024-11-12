@@ -20,13 +20,15 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.next_index = 0
         self.match_index = 0
 
-        self.state = RaftServerState.LEADER # placeholder
+        self.state = RaftServerState.CANDIDATE # placeholder
 
+    # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entries(self, request, context):
         # return super().append_entries(request, context)
 
         raise NotImplementedError
 
+    # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def request_vote(self, request, context):
         # return super().request_vote(request, context)
     
