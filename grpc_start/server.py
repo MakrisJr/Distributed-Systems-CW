@@ -25,17 +25,17 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    # track connected clients in a Set
     def __init__(self):
-        # self.lock = threading.Lock()
-        self.lock_owner = None
-        self.clients = {}
-        self.waiting_list = deque()
-        self.seq = 1
+        self.lock_owner = None # does not need to be synced independently; always equal to waiting_list[0]
 
-        self.appends = deque()
+        self.clients = {} # needs to be synced - 'add client' action, 'increment client's expected seq number' action
+        self.waiting_list = deque() # needs to be synced - 'add', 'remove client id' action
+        self.newClientId = 1 # needs to be synced - 'increment' action
+        self.appends = deque() # needs to be synced - 'add operation' action, 'execute all' action
+        # so any time any of these change, it's a log entry
 
-        self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock)
+        self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock) # would be difficult and stupid to sync
+        # lock timer DOES NOT GET STARTED NOW: only starts with the very first call to lock_acquire
 
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
@@ -80,18 +80,6 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             print(f"Lock granted to client {self.lock_owner}")
             self.start_lock_timer()
 
-    def client_init(self, request, context):
-        client_ip = context.peer()
-        client_id = self.seq
-        self.seq += 1
-        client_seq = 1  # sequence number of next expected request
-
-        self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
-        if DEBUG:
-            print("client_init received: " + str(request.rc))
-            print("connected clients: " + str(self.clients))
-        return lock_pb2.Int(rc=client_id, seq=client_seq)
-
     def check_client_seq(self, client_id, request_seq) -> lock_pb2.Response:
         """Check if a) the client has called client_init beforehand, and b) if the request is a duplicate or not"""
         if client_id in self.clients:
@@ -106,6 +94,18 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             return lock_pb2.Response(
                 status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq
             )
+
+    def client_init(self, request, context):
+        client_ip = context.peer()
+        client_id = self.newClientId
+        self.newClientId += 1
+        client_seq = 1  # sequence number of next expected request
+
+        self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
+        if DEBUG:
+            print("client_init received: " + str(request.rc))
+            print("connected clients: " + str(self.clients))
+        return lock_pb2.Int(rc=client_id, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
@@ -272,6 +272,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
 
 def create_files(n=100):
+    # needs to be modified to account for multiple servers
+    
     # create directory & files if necessary:
     if not os.path.exists("./files"):
         os.makedirs("./files")
@@ -289,7 +291,7 @@ def reset_files(n=100):
 
 
 if __name__ == "__main__":
-    create_files()
+    create_files() # presumably the server object should do this, rather than it being randomly outside??
     logging.basicConfig()
     server = LockServer()
     server.serve()

@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package raft_service;
+
+// various 'command' messages to instruct the followers to do a thing the leader has done
+
+// add client to self.clients
+message AddClientCommand {
+    int32 client_id = 1;
+}
+
+message ChangeLockHolderCommand {
+    int32 client_id = 1;
+}
+
+// increment ID assigned to new clients
+message IncrementNewClientIDCommand {}
+
+// add a file append operation to local queue of appends
+message AddAppendCommand {
+    string filename = 1;
+    bytes content = 2;
+}
+
+// execute all appends in queue
+message ExecuteAppendsCommand {}
+
+message LogEntry {
+    int32 term = 1;
+
+    // only one command per log entry!
+    oneof command {
+        AddClientCommand add_client = 2;
+        ChangeLockHolderCommand change_lock_holder = 3;
+        IncrementNewClientIDCommand increment_new_client = 4;
+        AddAppendCommand add_append = 5;
+        ExecuteAppendsCommand execute_appends = 6;
+    }
+    // check which one exists via (log entry).hasField("add_client"), for example
+}
+
+message AppendArgs{
+    int32 term = 1; // leader's term
+    int32 leaderID = 2; // so follower can redirect clients
+    int32 prevLogIndex = 3; // index of log entry immediately preceding new ones
+
+    repeated LogEntry log_entries = 4; // log entries for followers to append
+    // empty list indicates heartbeat from leader to followers
+
+    int32 leaderCommit = 5; // leader's commitIndex
+}
+
+message ReqVoteArgs{
+    int32 term = 1; // candidate's term
+    int32 candidateID = 2; // ID of candidate requesting vote
+    int32 lastLogIndex = 3; // index of candidate's last log entry
+    int32 lastLogTerm = 4; // term of candidate's last log entry
+}
+
+message AppendResponse {
+    int32 term = 1; // current term, for leader to update itself
+    bool success = 2; // true if follower contained entry matching prevLogIndex and prevLogTerm
+}
+
+message ReqVoteResponse {
+    int32 term = 1; // current term, for candidate to update itself
+    bool voteGranted = 2; // true if candidate received vote
+}
+
+service RaftService {
+    rpc append_entries(AppendArgs) returns (AppendResponse);
+    rpc request_vote(ReqVoteArgs) returns (ReqVoteResponse);
+}
