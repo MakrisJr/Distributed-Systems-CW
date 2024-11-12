@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x0craft_service\"%\n\x10\x41\x64\x64\x43lientCommand\x12\x11\n\tclient_id\x18\x02 \x01(\x05\",\n\x17\x41\x64\x64ToWaitingListCommand\x12\x11\n\tclient_id\x18\x02 \x01(\x05\"\x1e\n\x1cRemoveHeadWaitingListCommand\"\x1d\n\x1bIncrementNewClientIDCommand\"5\n\x10\x41\x64\x64\x41ppendCommand\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\x0c\"\x17\n\x15\x45xecuteAppendsCommand\"\xad\x03\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x34\n\nadd_client\x18\x02 \x01(\x0b\x32\x1e.raft_service.AddClientCommandH\x00\x12\x41\n\x10\x61\x64\x64_waiting_list\x18\x03 \x01(\x0b\x32%.raft_service.AddToWaitingListCommandH\x00\x12N\n\x18remove_head_waiting_list\x18\x04 \x01(\x0b\x32*.raft_service.RemoveHeadWaitingListCommandH\x00\x12I\n\x14increment_new_client\x18\x05 \x01(\x0b\x32).raft_service.IncrementNewClientIDCommandH\x00\x12\x34\n\nadd_append\x18\x06 \x01(\x0b\x32\x1e.raft_service.AddAppendCommandH\x00\x12>\n\x0f\x65xecute_appends\x18\x07 \x01(\x0b\x32#.raft_service.ExecuteAppendsCommandH\x00\x42\t\n\x07\x63ommand\"\x85\x01\n\nAppendArgs\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x10\n\x08leaderID\x18\x02 \x01(\x05\x12\x14\n\x0cprevLogIndex\x18\x03 \x01(\x05\x12+\n\x0blog_entries\x18\x04 \x03(\x0b\x32\x16.raft_service.LogEntry\x12\x14\n\x0cleaderCommit\x18\x05 \x01(\x05\"[\n\x0bReqVoteArgs\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x13\n\x0b\x63\x61ndidateID\x18\x02 \x01(\x05\x12\x14\n\x0clastLogIndex\x18\x03 \x01(\x05\x12\x13\n\x0blastLogTerm\x18\x04 \x01(\x05\"/\n\x0e\x41ppendResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\"4\n\x0fReqVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x13\n\x0bvoteGranted\x18\x02 \x01(\x08\x32\xa1\x01\n\x0bRaftService\x12H\n\x0e\x61ppend_entries\x12\x18.raft_service.AppendArgs\x1a\x1c.raft_service.AppendResponse\x12H\n\x0crequest_vote\x12\x19.raft_service.ReqVoteArgs\x1a\x1d.raft_service.ReqVoteResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x0craft_service\"%\n\x10\x41\x64\x64\x43lientCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\",\n\x17\x43hangeLockHolderCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\"\x1d\n\x1bIncrementNewClientIDCommand\"5\n\x10\x41\x64\x64\x41ppendCommand\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\"\x17\n\x15\x45xecuteAppendsCommand\"\xdf\x02\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x34\n\nadd_client\x18\x02 \x01(\x0b\x32\x1e.raft_service.AddClientCommandH\x00\x12\x43\n\x12\x63hange_lock_holder\x18\x03 \x01(\x0b\x32%.raft_service.ChangeLockHolderCommandH\x00\x12I\n\x14increment_new_client\x18\x04 \x01(\x0b\x32).raft_service.IncrementNewClientIDCommandH\x00\x12\x34\n\nadd_append\x18\x05 \x01(\x0b\x32\x1e.raft_service.AddAppendCommandH\x00\x12>\n\x0f\x65xecute_appends\x18\x06 \x01(\x0b\x32#.raft_service.ExecuteAppendsCommandH\x00\x42\t\n\x07\x63ommand\"\x85\x01\n\nAppendArgs\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x10\n\x08leaderID\x18\x02 \x01(\x05\x12\x14\n\x0cprevLogIndex\x18\x03 \x01(\x05\x12+\n\x0blog_entries\x18\x04 \x03(\x0b\x32\x16.raft_service.LogEntry\x12\x14\n\x0cleaderCommit\x18\x05 \x01(\x05\"[\n\x0bReqVoteArgs\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x13\n\x0b\x63\x61ndidateID\x18\x02 \x01(\x05\x12\x14\n\x0clastLogIndex\x18\x03 \x01(\x05\x12\x13\n\x0blastLogTerm\x18\x04 \x01(\x05\"/\n\x0e\x41ppendResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\"4\n\x0fReqVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x13\n\x0bvoteGranted\x18\x02 \x01(\x08\x32\xa1\x01\n\x0bRaftService\x12H\n\x0e\x61ppend_entries\x12\x18.raft_service.AppendArgs\x1a\x1c.raft_service.AppendResponse\x12H\n\x0crequest_vote\x12\x19.raft_service.ReqVoteArgs\x1a\x1d.raft_service.ReqVoteResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,26 +33,24 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_ADDCLIENTCOMMAND']._serialized_start=28
   _globals['_ADDCLIENTCOMMAND']._serialized_end=65
-  _globals['_ADDTOWAITINGLISTCOMMAND']._serialized_start=67
-  _globals['_ADDTOWAITINGLISTCOMMAND']._serialized_end=111
-  _globals['_REMOVEHEADWAITINGLISTCOMMAND']._serialized_start=113
-  _globals['_REMOVEHEADWAITINGLISTCOMMAND']._serialized_end=143
-  _globals['_INCREMENTNEWCLIENTIDCOMMAND']._serialized_start=145
-  _globals['_INCREMENTNEWCLIENTIDCOMMAND']._serialized_end=174
-  _globals['_ADDAPPENDCOMMAND']._serialized_start=176
-  _globals['_ADDAPPENDCOMMAND']._serialized_end=229
-  _globals['_EXECUTEAPPENDSCOMMAND']._serialized_start=231
-  _globals['_EXECUTEAPPENDSCOMMAND']._serialized_end=254
-  _globals['_LOGENTRY']._serialized_start=257
-  _globals['_LOGENTRY']._serialized_end=686
-  _globals['_APPENDARGS']._serialized_start=689
-  _globals['_APPENDARGS']._serialized_end=822
-  _globals['_REQVOTEARGS']._serialized_start=824
-  _globals['_REQVOTEARGS']._serialized_end=915
-  _globals['_APPENDRESPONSE']._serialized_start=917
-  _globals['_APPENDRESPONSE']._serialized_end=964
-  _globals['_REQVOTERESPONSE']._serialized_start=966
-  _globals['_REQVOTERESPONSE']._serialized_end=1018
-  _globals['_RAFTSERVICE']._serialized_start=1021
-  _globals['_RAFTSERVICE']._serialized_end=1182
+  _globals['_CHANGELOCKHOLDERCOMMAND']._serialized_start=67
+  _globals['_CHANGELOCKHOLDERCOMMAND']._serialized_end=111
+  _globals['_INCREMENTNEWCLIENTIDCOMMAND']._serialized_start=113
+  _globals['_INCREMENTNEWCLIENTIDCOMMAND']._serialized_end=142
+  _globals['_ADDAPPENDCOMMAND']._serialized_start=144
+  _globals['_ADDAPPENDCOMMAND']._serialized_end=197
+  _globals['_EXECUTEAPPENDSCOMMAND']._serialized_start=199
+  _globals['_EXECUTEAPPENDSCOMMAND']._serialized_end=222
+  _globals['_LOGENTRY']._serialized_start=225
+  _globals['_LOGENTRY']._serialized_end=576
+  _globals['_APPENDARGS']._serialized_start=579
+  _globals['_APPENDARGS']._serialized_end=712
+  _globals['_REQVOTEARGS']._serialized_start=714
+  _globals['_REQVOTEARGS']._serialized_end=805
+  _globals['_APPENDRESPONSE']._serialized_start=807
+  _globals['_APPENDRESPONSE']._serialized_end=854
+  _globals['_REQVOTERESPONSE']._serialized_start=856
+  _globals['_REQVOTERESPONSE']._serialized_end=908
+  _globals['_RAFTSERVICE']._serialized_start=911
+  _globals['_RAFTSERVICE']._serialized_end=1072
 # @@protoc_insertion_point(module_scope)
