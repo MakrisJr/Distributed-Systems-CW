@@ -6,8 +6,8 @@ from pathlib import Path
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-from grpc_start.client import Client
-from grpc_start.server import LockServer, reset_files
+from grpc_start.client import Client # noqa: E402
+from grpc_start.server import LockServer, reset_files  # noqa: E402
 
 FILE_PATH = "files/"
 
