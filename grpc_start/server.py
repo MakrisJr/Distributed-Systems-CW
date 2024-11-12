@@ -265,6 +265,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.lock_timer.cancel()
         self.server.stop(0)
 
+    def where_is_server(self, request, context):
+        ip = "0.0.0.0"
+        port = -1
+        return lock_pb2.ServerLocation(ip=ip, port=port)
+
 
 def create_files(n=100):
     # create directory & files if necessary:
