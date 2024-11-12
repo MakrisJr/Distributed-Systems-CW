@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import raft_pb2 as raft__pb2
+from grpc_start import raft_pb2 as grpc__start_dot_raft__pb2
 
 GRPC_GENERATED_VERSION = '1.67.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in raft_pb2_grpc.py depends on'
+        + f' but the generated code in grpc_start/raft_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,13 +36,18 @@ class RaftServiceStub(object):
         """
         self.append_entries = channel.unary_unary(
                 '/raft_service.RaftService/append_entries',
-                request_serializer=raft__pb2.AppendArgs.SerializeToString,
-                response_deserializer=raft__pb2.AppendResponse.FromString,
+                request_serializer=grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.AppendResponse.FromString,
                 _registered_method=True)
         self.request_vote = channel.unary_unary(
                 '/raft_service.RaftService/request_vote',
-                request_serializer=raft__pb2.ReqVoteArgs.SerializeToString,
-                response_deserializer=raft__pb2.ReqVoteResponse.FromString,
+                request_serializer=grpc__start_dot_raft__pb2.ReqVoteArgs.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.ReqVoteResponse.FromString,
+                _registered_method=True)
+        self.are_you_leader = channel.unary_unary(
+                '/raft_service.RaftService/are_you_leader',
+                request_serializer=grpc__start_dot_raft__pb2.Empty.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
                 _registered_method=True)
 
 
@@ -61,18 +66,29 @@ class RaftServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def are_you_leader(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RaftServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'append_entries': grpc.unary_unary_rpc_method_handler(
                     servicer.append_entries,
-                    request_deserializer=raft__pb2.AppendArgs.FromString,
-                    response_serializer=raft__pb2.AppendResponse.SerializeToString,
+                    request_deserializer=grpc__start_dot_raft__pb2.AppendArgs.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.AppendResponse.SerializeToString,
             ),
             'request_vote': grpc.unary_unary_rpc_method_handler(
                     servicer.request_vote,
-                    request_deserializer=raft__pb2.ReqVoteArgs.FromString,
-                    response_serializer=raft__pb2.ReqVoteResponse.SerializeToString,
+                    request_deserializer=grpc__start_dot_raft__pb2.ReqVoteArgs.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.ReqVoteResponse.SerializeToString,
+            ),
+            'are_you_leader': grpc.unary_unary_rpc_method_handler(
+                    servicer.are_you_leader,
+                    request_deserializer=grpc__start_dot_raft__pb2.Empty.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -100,8 +116,8 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/append_entries',
-            raft__pb2.AppendArgs.SerializeToString,
-            raft__pb2.AppendResponse.FromString,
+            grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+            grpc__start_dot_raft__pb2.AppendResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -127,8 +143,35 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/request_vote',
-            raft__pb2.ReqVoteArgs.SerializeToString,
-            raft__pb2.ReqVoteResponse.FromString,
+            grpc__start_dot_raft__pb2.ReqVoteArgs.SerializeToString,
+            grpc__start_dot_raft__pb2.ReqVoteResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def are_you_leader(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/raft_service.RaftService/are_you_leader',
+            grpc__start_dot_raft__pb2.Empty.SerializeToString,
+            grpc__start_dot_raft__pb2.Bool.FromString,
             options,
             channel_credentials,
             insecure,

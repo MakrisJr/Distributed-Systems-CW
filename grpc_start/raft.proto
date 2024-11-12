@@ -67,7 +67,14 @@ message ReqVoteResponse {
     bool voteGranted = 2; // true if candidate received vote
 }
 
+message Bool {
+    bool value = 1;
+}
+
+message Empty {}
+
 service RaftService {
     rpc append_entries(AppendArgs) returns (AppendResponse);
     rpc request_vote(ReqVoteArgs) returns (ReqVoteResponse);
+    rpc are_you_leader(Empty) returns (Bool);
 }

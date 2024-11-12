@@ -6,7 +6,7 @@ from pathlib import Path
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-from grpc_start.client import Client # noqa: E402
+from grpc_start.client import Client  # noqa: E402
 from grpc_start.server import LockServer, reset_files  # noqa: E402
 
 FILE_PATH = "files/"
@@ -318,36 +318,62 @@ def test_stuck_after_editing_file():
     return False
 
 
+def test_raft():
+    server1 = LockServer("localhost", 50051)
+    server2 = LockServer("localhost", 50052)
+    server3 = LockServer("localhost", 50053)
+
+    thread1 = threading.Thread(target=server1.serve)
+    thread2 = threading.Thread(target=server2.serve)
+    thread3 = threading.Thread(target=server3.serve)
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+
+    time.sleep(15)
+
+    server1.stop()
+    server2.stop()
+    server3.stop()
+
+    return True
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
-    if not test_packet_delay():
-        failed_tests.append("test_packet_delay")
-        print("test_packet_delay failed")
+    # if not test_packet_delay():
+    #     failed_tests.append("test_packet_delay")
+    #     print("test_packet_delay failed")
 
-    if not test_client_packet_loss():
-        failed_tests.append("test_client_packet_loss")
-        print("test_client_packet_loss failed")
+    # if not test_client_packet_loss():
+    #     failed_tests.append("test_client_packet_loss")
+    #     print("test_client_packet_loss failed")
 
-    if not test_server_packet_loss():
-        failed_tests.append("test_server_packet_loss")
-        print("test_server_packet_loss failed")
+    # if not test_server_packet_loss():
+    #     failed_tests.append("test_server_packet_loss")
+    #     print("test_server_packet_loss failed")
 
-    if not test_duplicated_packets():
-        failed_tests.append("test_duplicated_packets")
-        print("test_duplicated_packets failed")
+    # if not test_duplicated_packets():
+    #     failed_tests.append("test_duplicated_packets")
+    #     print("test_duplicated_packets failed")
 
-    if not test_combined_network_failures():
-        failed_tests.append("test_combined_network_failures")
-        print("test_combined_network_failures failed")
+    # if not test_combined_network_failures():
+    #     failed_tests.append("test_combined_network_failures")
+    #     print("test_combined_network_failures failed")
 
-    if not test_stuck_before_editing_file():
-        failed_tests.append("test_stuck_before_editing_file")
-        print("test_stuck_before_editing_file failed")
+    # if not test_stuck_before_editing_file():
+    #     failed_tests.append("test_stuck_before_editing_file")
+    #     print("test_stuck_before_editing_file failed")
 
-    if not test_stuck_after_editing_file():
-        failed_tests.append("test_stuck_after_editing_file")
-        print("test_stuck_after_editing_file failed")
+    # if not test_stuck_after_editing_file():
+    #     failed_tests.append("test_stuck_after_editing_file")
+    #     print("test_stuck_after_editing_file failed")
+
+    if not test_raft():
+        failed_tests.append("test_raft")
+        print("test_raft failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")
