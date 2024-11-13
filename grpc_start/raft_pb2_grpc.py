@@ -44,6 +44,11 @@ class RaftServiceStub(object):
                 request_serializer=raft__pb2.ReqVoteArgs.SerializeToString,
                 response_deserializer=raft__pb2.ReqVoteResponse.FromString,
                 _registered_method=True)
+        self.are_you_leader = channel.unary_unary(
+                '/raft_service.RaftService/are_you_leader',
+                request_serializer=raft__pb2.Empty.SerializeToString,
+                response_deserializer=raft__pb2.Bool.FromString,
+                _registered_method=True)
 
 
 class RaftServiceServicer(object):
@@ -61,6 +66,12 @@ class RaftServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def are_you_leader(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RaftServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -73,6 +84,11 @@ def add_RaftServiceServicer_to_server(servicer, server):
                     servicer.request_vote,
                     request_deserializer=raft__pb2.ReqVoteArgs.FromString,
                     response_serializer=raft__pb2.ReqVoteResponse.SerializeToString,
+            ),
+            'are_you_leader': grpc.unary_unary_rpc_method_handler(
+                    servicer.are_you_leader,
+                    request_deserializer=raft__pb2.Empty.FromString,
+                    response_serializer=raft__pb2.Bool.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -129,6 +145,33 @@ class RaftService(object):
             '/raft_service.RaftService/request_vote',
             raft__pb2.ReqVoteArgs.SerializeToString,
             raft__pb2.ReqVoteResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def are_you_leader(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/raft_service.RaftService/are_you_leader',
+            raft__pb2.Empty.SerializeToString,
+            raft__pb2.Bool.FromString,
             options,
             channel_credentials,
             insecure,

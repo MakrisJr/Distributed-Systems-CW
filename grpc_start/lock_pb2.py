@@ -24,15 +24,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nlock.proto\x12\x0clock_service\"+\n\tlock_args\x12\x11\n\tclient_id\x18\x01 \x01(\x05\x12\x0b\n\x03seq\x18\x02 \x01(\x05\"=\n\x08Response\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.lock_service.Status\x12\x0b\n\x03seq\x18\x02 \x01(\x05\"N\n\tfile_args\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\x12\x11\n\tclient_id\x18\x03 \x01(\x05\x12\x0b\n\x03seq\x18\x04 \x01(\x05\"D\n\x03Int\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.lock_service.Status\x12\n\n\x02rc\x18\x02 \x01(\x05\x12\x0b\n\x03seq\x18\x03 \x01(\x05*h\n\x06Status\x12\x0b\n\x07SUCCESS\x10\x00\x12\x0e\n\nFILE_ERROR\x10\x01\x12\x0b\n\x07\x46\x41ILURE\x10\x02\x12\r\n\tSEQ_ERROR\x10\x03\x12\x13\n\x0f\x43LIENT_NOT_INIT\x10\x04\x12\x10\n\x0cLOCK_EXPIRED\x10\x05\x32\xba\x02\n\x0bLockService\x12\x33\n\x0b\x63lient_init\x12\x11.lock_service.Int\x1a\x11.lock_service.Int\x12?\n\x0clock_acquire\x12\x17.lock_service.lock_args\x1a\x16.lock_service.Response\x12?\n\x0clock_release\x12\x17.lock_service.lock_args\x1a\x16.lock_service.Response\x12>\n\x0b\x66ile_append\x12\x17.lock_service.file_args\x1a\x16.lock_service.Response\x12\x34\n\x0c\x63lient_close\x12\x11.lock_service.Int\x1a\x11.lock_service.Intb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nlock.proto\x12\x0clock_service\"+\n\tlock_args\x12\x11\n\tclient_id\x18\x01 \x01(\x05\x12\x0b\n\x03seq\x18\x02 \x01(\x05\"=\n\x08Response\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.lock_service.Status\x12\x0b\n\x03seq\x18\x02 \x01(\x05\"N\n\tfile_args\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\x12\x11\n\tclient_id\x18\x03 \x01(\x05\x12\x0b\n\x03seq\x18\x04 \x01(\x05\"D\n\x03Int\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.lock_service.Status\x12\n\n\x02rc\x18\x02 \x01(\x05\x12\x0b\n\x03seq\x18\x03 \x01(\x05\"\x07\n\x05\x45mpty\"#\n\x07\x41\x64\x64ress\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05*h\n\x06Status\x12\x0b\n\x07SUCCESS\x10\x00\x12\x0e\n\nFILE_ERROR\x10\x01\x12\x0b\n\x07\x46\x41ILURE\x10\x02\x12\r\n\tSEQ_ERROR\x10\x03\x12\x13\n\x0f\x43LIENT_NOT_INIT\x10\x04\x12\x10\n\x0cLOCK_EXPIRED\x10\x05\x32\xf9\x02\n\x0bLockService\x12\x33\n\x0b\x63lient_init\x12\x11.lock_service.Int\x1a\x11.lock_service.Int\x12?\n\x0clock_acquire\x12\x17.lock_service.lock_args\x1a\x16.lock_service.Response\x12?\n\x0clock_release\x12\x17.lock_service.lock_args\x1a\x16.lock_service.Response\x12>\n\x0b\x66ile_append\x12\x17.lock_service.file_args\x1a\x16.lock_service.Response\x12\x34\n\x0c\x63lient_close\x12\x11.lock_service.Int\x1a\x11.lock_service.Int\x12=\n\x0fwhere_is_server\x12\x13.lock_service.Empty\x1a\x15.lock_service.Addressb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'lock_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_STATUS']._serialized_start=286
-  _globals['_STATUS']._serialized_end=390
+  _globals['_STATUS']._serialized_start=332
+  _globals['_STATUS']._serialized_end=436
   _globals['_LOCK_ARGS']._serialized_start=28
   _globals['_LOCK_ARGS']._serialized_end=71
   _globals['_RESPONSE']._serialized_start=73
@@ -41,6 +41,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_FILE_ARGS']._serialized_end=214
   _globals['_INT']._serialized_start=216
   _globals['_INT']._serialized_end=284
-  _globals['_LOCKSERVICE']._serialized_start=393
-  _globals['_LOCKSERVICE']._serialized_end=707
+  _globals['_EMPTY']._serialized_start=286
+  _globals['_EMPTY']._serialized_end=293
+  _globals['_ADDRESS']._serialized_start=295
+  _globals['_ADDRESS']._serialized_end=330
+  _globals['_LOCKSERVICE']._serialized_start=439
+  _globals['_LOCKSERVICE']._serialized_end=816
 # @@protoc_insertion_point(module_scope)

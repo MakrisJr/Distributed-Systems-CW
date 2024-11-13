@@ -9,6 +9,11 @@ message AddClientCommand {
     int32 client_id = 1;
 }
 
+// increment the expected sequence no in self.clients[client_id]
+message IncrementClientSeqCommand {
+    int32 client_id = 1;
+}
+
 message ChangeLockHolderCommand {
     int32 client_id = 1;
 }
@@ -26,48 +31,40 @@ message AddAppendCommand {
 message ExecuteAppendsCommand {}
 
 message LogEntry {
-    int32 term = 1;
-
     // only one command per log entry!
     oneof command {
         AddClientCommand add_client = 2;
-        ChangeLockHolderCommand change_lock_holder = 3;
-        IncrementNewClientIDCommand increment_new_client = 4;
-        AddAppendCommand add_append = 5;
-        ExecuteAppendsCommand execute_appends = 6;
+        IncrementClientSeqCommand increment_client_seq = 3;
+        ChangeLockHolderCommand change_lock_holder = 4;
+        IncrementNewClientIDCommand increment_new_client_id = 5;
+        AddAppendCommand add_append = 6;
+        ExecuteAppendsCommand execute_appends = 7;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }
 
 message AppendArgs{
-    int32 term = 1; // leader's term
-    int32 leaderID = 2; // so follower can redirect clients
-    int32 prevLogIndex = 3; // index of log entry immediately preceding new ones
-
-    repeated LogEntry log_entries = 4; // log entries for followers to append
-    // empty list indicates heartbeat from leader to followers
-
-    int32 leaderCommit = 5; // leader's commitIndex
+    string leaderID = 2; // so follower can redirect clients
+    LogEntry entry = 4; // log entries for followers to append
+    // no entry == heartbeat
 }
 
-message ReqVoteArgs{
-    int32 term = 1; // candidate's term
-    int32 candidateID = 2; // ID of candidate requesting vote
-    int32 lastLogIndex = 3; // index of candidate's last log entry
-    int32 lastLogTerm = 4; // term of candidate's last log entry
+message ElectionContest{
+    int32 generatedNo = 1;
 }
 
 message AppendResponse {
-    int32 term = 1; // current term, for leader to update itself
-    bool success = 2; // true if follower contained entry matching prevLogIndex and prevLogTerm
+    bool success = 2; // true if follower  successfully executed
 }
 
-message ReqVoteResponse {
-    int32 term = 1; // current term, for candidate to update itself
-    bool voteGranted = 2; // true if candidate received vote
+message Bool {
+    bool value = 1;
 }
+
+message Empty {}
 
 service RaftService {
     rpc append_entries(AppendArgs) returns (AppendResponse);
-    rpc request_vote(ReqVoteArgs) returns (ReqVoteResponse);
+    rpc request_vote(ElectionContest) returns (ElectionContest);
+    rpc are_you_leader(Empty) returns (Bool);
 }

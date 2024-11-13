@@ -59,6 +59,11 @@ class LockServiceStub(object):
                 request_serializer=lock__pb2.Int.SerializeToString,
                 response_deserializer=lock__pb2.Int.FromString,
                 _registered_method=True)
+        self.where_is_server = channel.unary_unary(
+                '/lock_service.LockService/where_is_server',
+                request_serializer=lock__pb2.Empty.SerializeToString,
+                response_deserializer=lock__pb2.Address.FromString,
+                _registered_method=True)
 
 
 class LockServiceServicer(object):
@@ -94,6 +99,12 @@ class LockServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def where_is_server(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_LockServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -121,6 +132,11 @@ def add_LockServiceServicer_to_server(servicer, server):
                     servicer.client_close,
                     request_deserializer=lock__pb2.Int.FromString,
                     response_serializer=lock__pb2.Int.SerializeToString,
+            ),
+            'where_is_server': grpc.unary_unary_rpc_method_handler(
+                    servicer.where_is_server,
+                    request_deserializer=lock__pb2.Empty.FromString,
+                    response_serializer=lock__pb2.Address.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -258,6 +274,33 @@ class LockService(object):
             '/lock_service.LockService/client_close',
             lock__pb2.Int.SerializeToString,
             lock__pb2.Int.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def where_is_server(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/lock_service.LockService/where_is_server',
+            lock__pb2.Empty.SerializeToString,
+            lock__pb2.Address.FromString,
             options,
             channel_credentials,
             insecure,

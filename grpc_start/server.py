@@ -12,7 +12,7 @@ import grpc
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-from grpc_start import lock_pb2, lock_pb2_grpc  # noqa: E402
+from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server  # noqa: E402
 
 # The server is required to have the following functionality:
 # 1.  Create 100 files that clients can write. The file name should strictly follow this format "file_0", "file_1", ..., "file_99".
@@ -25,17 +25,25 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self):
-        self.lock_owner = None # does not need to be synced independently; always equal to waiting_list[0]
+    def __init__(self, port, ip):
+        self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
-        self.clients = {} # needs to be synced - 'add client' action, 'increment client's expected seq number' action
-        self.waiting_list = deque() # needs to be synced - 'add', 'remove client id' action
-        self.newClientId = 1 # needs to be synced - 'increment' action
-        self.appends = deque() # needs to be synced - 'add operation' action, 'execute all' action
+        self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
+        self.waiting_list = (
+            deque()
+        )  # needs to be synced - 'add', 'remove client id' action
+        self.newClientId = 1  # needs to be synced - 'increment' action
+        self.appends = (
+            deque()
+        )  # needs to be synced - 'add operation' action, 'execute all' action
         # so any time any of these change, it's a log entry
 
-        self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock) # would be difficult and stupid to sync
+        self.lock_timer = threading.Timer(
+            LOCK_TIMEOUT, self.force_release_lock
+        )  # would be difficult and stupid to sync
         # lock timer DOES NOT GET STARTED NOW: only starts with the very first call to lock_acquire
+        self.ip = ip
+        self.port = port
 
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
@@ -254,21 +262,30 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=0)
 
     def serve(self):
-        port = "50051"
+        self.raft_server = raft_server.RaftServer(self.ip, self.port)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        lock_pb2_grpc.add_LockServiceServicer_to_server(LockServer(), self.server)
-        self.server.add_insecure_port("[::]:" + port)
+        raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
+        lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)
+
+        self.server.add_insecure_port(f"[::]:{self.port}")
         self.server.start()
-        print("Server started, listening on " + port)
+        print("Server started, listening on ", self.port)
+        time.sleep(5)
+        print(f"Raft server {self.port} found leader: {self.raft_server.find_leader()}")
 
     def stop(self):
         self.lock_timer.cancel()
         self.server.stop(0)
 
+    def where_is_server(self, request, context):
+        ip = "0.0.0.0"
+        port = -1
+        return lock_pb2.ServerLocation(ip=ip, port=port)
+
 
 def create_files(n=100):
     # needs to be modified to account for multiple servers
-    
+
     # create directory & files if necessary:
     if not os.path.exists("./files"):
         os.makedirs("./files")
@@ -286,7 +303,7 @@ def reset_files(n=100):
 
 
 if __name__ == "__main__":
-    create_files() # presumably the server object should do this, rather than it being randomly outside??
+    create_files()  # presumably the server object should do this, rather than it being randomly outside??
     logging.basicConfig()
     server = LockServer()
     server.serve()
