@@ -13,7 +13,7 @@ root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
 from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server # noqa: E402
-from grpc_start import commands as cs
+from grpc_start import commands as cs  # noqa: E402
 
 # The server is required to have the following functionality:
 # 1.  Create 100 files that clients can write. The file name should strictly follow this format "file_0", "file_1", ..., "file_99".
@@ -26,7 +26,7 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self, port):
+    def __init__(self, port, ip):
         self.lock_owner = None # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action

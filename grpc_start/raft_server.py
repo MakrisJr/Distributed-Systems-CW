@@ -10,9 +10,6 @@ from grpc_start import commands as cs
 from grpc_start import raft_pb2, raft_pb2_grpc  # noqa: F401
 
 RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
-RETRY_LIMIT = 3
-RETRY_DELAY = 2
-
 
 class RaftServerState(Enum):
     LEADER = 1
@@ -33,17 +30,12 @@ MAX_ELECTION_TIMEOUT = 2
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
 
-RAFT_SERVER_PORTS = [
-    "50051",
-    "50052",
-    "50053",
-]  # find less stupid way of doing this lmao
-
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, is_leader=False):
         self.server_ip = ip
         self.server_port = port
+        
         self.current_term = 0
         self.voted_for = None
         self.log = []  # entries all of type LogEntry
@@ -54,14 +46,45 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.next_index = 0
         self.match_index = 0
 
-        self.channel = grpc.insecure_channel(f"{self.server_ip}:{self.server_port}")
-        self.stub = raft_pb2_grpc.RaftServiceStub(self.channel)
-
         self.raft_servers = RAFT_SERVERS.copy()
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
+        self.establish_channels_stubs()
+
+        self.election_timer = threading.Timer(
+            random.randint(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT),
+            self.begin_election,
+        )
+        self.election_lost = False
+
+        if is_leader:
+            self.leader_setup()
+        else:
+            self.follower_setup()
+
+    def leader_setup(self):
+        self.state = RaftServerState.LEADER
+        self.send_append_entries() # placeholder -- send empty heartbeats to all other servers so they know you're leader
+    
+    def follower_setup(self):
+        self.state = RaftServerState.FOLLOWER  # placeholder
+        print(f"Raft server {self.server_port}: Initialized as follower.")
+
+        # is this needed??
+        self.leader = self.find_leader()
+
+        if self.leader:
+            print(f"Raft server {self.server_port}: Found leader: {self.leader}")
+        else:
+            print(f"Raft server {self.server_port}: No leader found.")
+
+        self.start_election_timer()
+
+
+    def establish_channels_stubs(self):
         self.channels = {}
         self.stubs = {}
+
         print(f"SERVER LIST: {self.raft_servers}")
         for server in self.raft_servers:
             try:
@@ -76,15 +99,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                     f"Raft server {self.server_port}: Error connecting to {server}: {e}"
                 )
                 continue
-
-        self.state = RaftServerState.FOLLOWER  # placeholder
-        print(f"Raft server {self.server_port}: Initialized as follower.")
-        # self.leader = self.find_leader()
-
-        # if self.leader:
-        #     print(f"Raft server {self.server_port}: Found leader: {self.leader}")
-        # else:
-        #     print(f"Raft server {self.server_port}: No leader found.")
 
     def retry_rpc_call(self, rpc_func, *args, **kwargs):
         for attempt in range(RETRY_LIMIT):
@@ -129,16 +143,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             return raft_pb2.Bool(value=True)
         else:
             return raft_pb2.Bool(value=False)
-        self.state = RaftServerState.FOLLOWER  # placeholder
-
-        self.port = port
-
-        self.election_timer = threading.Timer(
-            random.randint(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT),
-            self.begin_election,
-        )
-
-        self.election_lost = False
 
     def start_election_timer(self):
         """Start or restart the election timer for this Raft node."""
@@ -153,23 +157,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
         self.current_election_tasks = []
 
-    def retry_rpc_call(self, rpc_func, *args, **kwargs):
-        for attempt in range(RETRY_LIMIT):
-            try:
-                response = rpc_func(*args, **kwargs)
-                return response
-            except grpc.RpcError as e:
-                print(
-                    f"Raft {self.server_port}: grpc error. Attempt {attempt + 1}/{RETRY_LIMIT}"
-                )
-                print(e)
-                time.sleep(RETRY_DELAY)
-
-        print(
-            f"Raft {self.server_port}: RETRY_RPC_CALL: Failed to receive response after retries."
-        )
-        return None
-
     def kill_old_election(self):
         # new elections can start while a prior election is still running
         # the old one needs to be 'killed' before the new one can start in earnest
@@ -182,24 +169,21 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def send_vote_requests(self):
         # one asynchronous task per vote request
-        for port in RAFT_SERVER_PORTS:
-            if port != self.port:
-                channel = grpc.aio.insecure_channel("localhost:" + port)
-                stub = raft_pb2_grpc.RaftServiceStub(channel)
+        for server in self.raft_servers:
+            stub = self.stubs[server]
 
-                task = asyncio.create_task(
-                    self.retry_rpc_call(
-                        stub.request_vote,
-                        raft_pb2.request_vote_args(
-                            term=self.current_term,
-                            candidateID=int(self.port),
-                            lastLogIndex=(len(self.log) - 1),
-                            lastLogTerm=self.log[-1].term,
-                        ),
-                    )
-                )
+            task = asyncio.create_task(
+                self.retry_rpc_call(
+                    stub.request_vote,
+                    raft_pb2.request_vote_args(
+                        term=self.current_term,
+                        candidateID=int(self.port),
+                        lastLogIndex=(len(self.log) - 1),
+                        lastLogTerm=self.log[-1].term,
+                    ),
+                ))
 
-                self.current_election_tasks.append(task)
+            self.current_election_tasks.append(task)
 
     async def begin_election(self):
         if self.state == RaftServerState.FOLLOWER:
@@ -209,7 +193,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             self.election_lost = False
             self.current_term += 1
 
-            # send vote requests to other raft nodes
+            # candidate votes for itself
             nr_votes_received = 1
 
             # one asynchronous task per vote request -- tasks added to election tasks list
