@@ -68,6 +68,7 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
+                self.where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -82,6 +83,15 @@ class Client:
         )
         if response and response.status == lock_pb2.Status.SEQ_ERROR:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            if DEBUG:
+                print(
+                    f"Client {self.client_id}: seq={self.seq}, response.seq={response.seq}"
+                )
+            if response.seq > self.seq:
+                # the server has processed the request already and updated the sequence number, but was lost on the way back
+                self.seq = response.seq
+            else:
+                self.seq_recovery(response.seq)
             return False
         if response and response.status == lock_pb2.Status.SUCCESS:
             print(
@@ -131,6 +141,8 @@ class Client:
             if response.seq > self.seq:
                 # the server has processed the request already and updated the sequence number, but was lost on the way back
                 self.seq = response.seq
+            else:
+                self.seq_recovery(response.seq)
             return False
         elif response and response.status == lock_pb2.Status.LOCK_EXPIRED:
             print(f"Client {self.client_id}: Lock expired. Need to recover.")
@@ -158,6 +170,15 @@ class Client:
             return True
         elif response and response.status == lock_pb2.Status.SEQ_ERROR:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            if DEBUG:
+                print(
+                    f"Client {self.client_id}: seq={self.seq}, response.seq={response.seq}"
+                )
+            if response.seq > self.seq:
+                # the server has processed the request already and updated the sequence number, but was lost on the way back
+                self.seq = response.seq
+            else:
+                self.seq_recovery(response.seq)
             return False
         else:  # response and response.status == lock_pb2.Status.FAILURE:
             self.seq = response.seq
@@ -175,40 +196,65 @@ class Client:
             )
             self.request_history[self.seq] = "client_close"
             self.seq = response.seq
+            # reset client_id and seq
+            self.client_id = 0
+            self.seq = 0
             return True
         elif response and response.status == lock_pb2.Status.SEQ_ERROR:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
+            if DEBUG:
+                print(
+                    f"Client {self.client_id}: seq={self.seq}, response.seq={response.seq}"
+                )
+            if response.seq > self.seq:
+                # the server has processed the request already and updated the sequence number, but was lost on the way back
+                self.seq = response.seq
+            else:
+                self.seq_recovery(response.seq)
             return False
         else:
             self.seq = response.seq
             print(f"Client {self.client_id}: Failed to close client after retries.")
             return False
 
-        def RPC_where_is_server(self):
-            for server in POSSIBLE_SERVERS:
-                try:
-                    response = self.stub.where_is_server(
-                        lock_pb2.Int(rc=self.client_id)
+    def RPC_where_is_server(self):
+        for server in POSSIBLE_SERVERS:
+            try:
+                response = self.stub.where_is_server(lock_pb2.Int(rc=self.client_id))
+                if response.port != -1:
+                    self.server_ip = response.ip
+                    self.server_port = response.port
+                    self.channel = grpc.insecure_channel(
+                        f"{self.server_ip}:{self.server_port}"
                     )
-                    if response.port != -1:
-                        self.server_ip = response.ip
-                        self.server_port = response.port
-                        self.channel = grpc.insecure_channel(
-                            f"{self.server_ip}:{self.server_port}"
-                        )
-                        self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
-                        print(
-                            f"Client {self.client_id}: Server found at {response.ip}:{response.port}"
-                        )
-                        return True
-                except grpc.RpcError as e:
+                    self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
                     print(
-                        f"Client {self.client_id}: RPC call where_is_server failed with error: {e}"
+                        f"Client {self.client_id}: Server found at {response.ip}:{response.port}"
                     )
-                    continue  # try next server
-            return False
+                    return True
+            except grpc.RpcError as e:
+                print(
+                    f"Client {self.client_id}: RPC call where_is_server failed with error: {e}"
+                )
+                continue  # try next server
+        return False
 
-    #
+    def seq_recovery(self, seq):
+        print(f"Client {self.client_id}: Attempting to recover lost calls.")
+        for i in range(seq, self.seq):
+            if self.request_history[i][0] == "lock_acquire":
+                self.RPC_lock_acquire()
+            elif self.request_history[i][0] == "file_append":
+                self.RPC_append_file(
+                    self.request_history[i][1], self.request_history[i][2]
+                )
+            elif self.request_history[i][0] == "lock_release":
+                self.RPC_lock_release()
+            else:
+                print(
+                    f"Client {self.client_id}: Could not recover request {i}: {self.request_history[i]}"
+                )
+                break
 
 
 # def run():
