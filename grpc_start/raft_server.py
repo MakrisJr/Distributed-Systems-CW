@@ -16,7 +16,6 @@ RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 class RaftServerState(Enum):
     LEADER = 1
     FOLLOWER = 2
-    CANDIDATE = 3
 
 
 # probably change these - raft paper says 150-300 ms
@@ -280,23 +279,15 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this bit is executed on the voters, not the candidate - this is the CONSEQUENCE of the RPC call, not the call itself
     def request_vote(self, request, context):
-        # return super().request_vote(request, context)
-        candidate_term = request.term
-        candidate_id = request.candidateID
-        candidate_last_log_index = request.lastLogIndex
-        candidate_last_log_term = request.lastLogTerm
+        candidate_generated_no = request.generatedNo
+        candidate_id = request.leaderID
 
-        if candidate_term >= self.current_term:
-            if not self.voted_for or self.voted_for == candidate_id:
-                if (
-                    self.log[-1].term <= candidate_last_log_term
-                    or len(self.log) - 1 <= candidate_last_log_index
-                ):
-                    return raft_pb2.ReqVoteResponse(
-                        term=self.current_term, voteGranted=True
-                    )
+        if candidate_generated_no > self.generated_no or (
+            candidate_generated_no == self.generated_no and candidate_id > self.id
+        ):
+            return raft_pb2.ReqVoteResponse(voteGranted=True)
 
-        return raft_pb2.ReqVoteResponse(term=self.current_term, voteGranted=False)
+        return raft_pb2.ReqVoteResponse(voteGranted=False)
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entries(self, entries: List[log.LogEntry]):
