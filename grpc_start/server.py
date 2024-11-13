@@ -262,7 +262,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=0)
 
     def serve(self):
-        self.raft_server = raft_server.RaftServer(self.ip, self.port)
+        self.raft_server = raft_server.RaftServer(self.port, self.ip)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
         lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)

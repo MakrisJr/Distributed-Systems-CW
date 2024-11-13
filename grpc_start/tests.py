@@ -8,10 +8,6 @@ sys.path.append(str(root_directory))
 
 from grpc_start.client import Client  # noqa: E402
 from grpc_start.server import LockServer, reset_files  # noqa: E402
-import lock_pb2_grpc
-
-import grpc
-import futures
 
 FILE_PATH = "files/"
 
