@@ -25,7 +25,7 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self, port, ip):
+    def __init__(self, ip, port):
         self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
@@ -262,7 +262,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=0)
 
     def serve(self):
-        self.raft_server = raft_server.RaftServer(self.ip, self.port)
+        self.raft_server = raft_server.RaftServer(self.port, self.ip)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
         lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)
