@@ -23,8 +23,3 @@ class AddAppendCommand(Command):
 
 class ExecuteAppendsCommand(Command):
     pass
-
-class LogEntry:
-    def __init__(self, term: int, command: Command):
-        self.term = term
-        self.command = command

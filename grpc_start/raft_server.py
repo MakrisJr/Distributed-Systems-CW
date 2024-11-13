@@ -7,7 +7,7 @@ from typing import List
 
 import grpc
 
-from grpc_start import commands as cs
+from grpc_start import log_entries as log
 from grpc_start import raft_pb2, raft_pb2_grpc  # noqa: F401
 
 RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
@@ -21,7 +21,7 @@ class RaftServerState(Enum):
 
 # probably change these - raft paper says 150-300 ms
 MIN_ELECTION_TIMEOUT = 1
-MAX_ELECTION_TIMEOUT = 2
+MAX_ELECTION_TIMEOUT = 10
 
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
@@ -224,8 +224,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                     # election WIN
                     if nr_votes_received >= 2:
                         print("Cancelling remaining tasks - this one is the new leader")
-                        self.state = RaftServerState.LEADER
-                        self.send_append_entries()  # placeholder -- intended behaviour is to send heartbeats to all other servers, so they know you're a leader
+                        self.leader_setup()
 
                         for task in self.current_election_tasks:
                             task.cancel()  # Cancel remaining tasks
@@ -233,27 +232,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
                 except asyncio.CancelledError:
                     print("Task was cancelled")
-
-    def log_entry_grpc_to_object(self, entry: raft_pb2.LogEntry) -> cs.LogEntry:
-        new_entry_term = entry.term
-
-        # mind you, clunky as all hell
-        if entry.hasField("add_client"):
-            new_command = cs.AddClientCommand(entry.add_client.client_id)
-        elif entry.hasField("increment_client_seq"):
-            new_command = cs.IncrementClientSeqCommand(entry.increment_client_seq.client_id)
-        elif entry.hasField("change_lock_holder"):
-            new_command = cs.ChangeLockHolderCommand(entry.change_lock_holder.client_id)
-        elif entry.hasField("increment_new_client_id"):
-            new_command = cs.IncrementNewClientIDCommand()
-        elif entry.hasField("add_append"):
-            new_command = cs.AddAppendCommand(entry.add_append.filename, entry.add_append.content)
-        elif entry.hasField("execute_appends"):
-            new_command = cs.ExecuteAppendsCommand()
-        else:
-            raise Exception("Command not present in log entry GRPC message")
-
-        return cs.LogEntry(new_entry_term, new_command)
 
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entries(self, request, context):
@@ -290,10 +268,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             index += 1
 
         # Step 4
-        # assumes that request has entries; would this fail if this was empty (i.e. heartbeat)?
         if request.entries:
             for entry in request.entries[i:]:
-                self.log.append(self.log_entry_grpc_to_object(entry))
+                self.log.append(log.log_entry_grpc_to_object(entry))
 
         # Step 5
         if request.leaderCommit > self.commit_index:
@@ -322,6 +299,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         return raft_pb2.ReqVoteResponse(term=self.current_term, voteGranted=False)
 
     # this is where this server calls the append_entries rpc on other servers
-    def send_append_entries(self, entries: List[cs.LogEntry]):
+    def send_append_entries(self, entries: List[log.LogEntry]):
         if self.state == RaftServerState.LEADER:
             raise NotImplementedError
