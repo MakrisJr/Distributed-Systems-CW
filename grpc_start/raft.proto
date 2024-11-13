@@ -49,6 +49,14 @@ message AppendArgs{
     // no entry == heartbeat
 }
 
+message RecoveryResponse {
+    repeated LogEntry log = 1;
+}
+
+message Int {
+    int32 value = 1;
+}
+
 message ElectionContest{
     int32 generatedNo = 1;
 }
@@ -64,7 +72,8 @@ message Bool {
 message Empty {}
 
 service RaftService {
-    rpc append_entries(AppendArgs) returns (AppendResponse);
+    rpc append_entry(AppendArgs) returns (AppendResponse);
     rpc request_vote(ElectionContest) returns (ElectionContest);
     rpc are_you_leader(Empty) returns (Bool);
+    rpc recover_logs(Int) returns (RecoveryResponse);
 }
