@@ -12,12 +12,10 @@ import grpc  # noqa: E402
 
 from grpc_start import lock_pb2, lock_pb2_grpc  # noqa: E402
 
-channel = grpc.insecure_channel("localhost:50051")
-stub = lock_pb2_grpc.LockServiceStub(channel)
-
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
 DEBUG = True
+POSSIBLE_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 
 
 def status_str(x):
@@ -41,10 +39,14 @@ class Client:
         self.client_id = 0
         self.seq = 0
         self.request_history = {}  # {seq: request}
+        self.server_ip = "localhost"
+        self.server_port = 50051
+        self.channel = grpc.insecure_channel(f"{self.server_ip}:{self.server_port}")
+        self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
 
     def RPC_client_init(self):
         try:
-            response = stub.client_init(lock_pb2.Int(rc=self.client_id))
+            response = self.stub.client_init(lock_pb2.Int(rc=self.client_id))
             self.client_id = response.rc
             self.seq = response.seq  # sequence number of next expected request
             if DEBUG:
@@ -75,7 +77,7 @@ class Client:
 
     def RPC_lock_acquire(self):
         response = self.retry_rpc_call(
-            stub.lock_acquire,
+            self.stub.lock_acquire,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
         if response and response.status == lock_pb2.Status.SEQ_ERROR:
@@ -102,7 +104,7 @@ class Client:
             return False
 
         response = self.retry_rpc_call(
-            stub.file_append,
+            self.stub.file_append,
             lock_pb2.file_args(
                 filename=f"file_{file_number}",
                 content=f"{text}".encode(),
@@ -143,7 +145,7 @@ class Client:
 
     def RPC_lock_release(self):
         response = self.retry_rpc_call(
-            stub.lock_release,
+            self.stub.lock_release,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
@@ -164,7 +166,7 @@ class Client:
 
     def RPC_client_close(self):
         response = self.retry_rpc_call(
-            stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
+            self.stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )
         if response and response.status == lock_pb2.Status.SUCCESS:
             print(
@@ -180,6 +182,30 @@ class Client:
         else:
             self.seq = response.seq
             print(f"Client {self.client_id}: Failed to close client after retries.")
+            return False
+
+        def RPC_where_is_server(self):
+            for server in POSSIBLE_SERVERS:
+                try:
+                    response = self.stub.where_is_server(
+                        lock_pb2.Int(rc=self.client_id)
+                    )
+                    if response.port != -1:
+                        self.server_ip = response.ip
+                        self.server_port = response.port
+                        self.channel = grpc.insecure_channel(
+                            f"{self.server_ip}:{self.server_port}"
+                        )
+                        self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+                        print(
+                            f"Client {self.client_id}: Server found at {response.ip}:{response.port}"
+                        )
+                        return True
+                except grpc.RpcError as e:
+                    print(
+                        f"Client {self.client_id}: RPC call where_is_server failed with error: {e}"
+                    )
+                    continue  # try next server
             return False
 
     #

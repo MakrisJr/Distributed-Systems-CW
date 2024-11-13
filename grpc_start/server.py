@@ -43,6 +43,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             LOCK_TIMEOUT, self.force_release_lock
         )  # would be difficult and stupid to sync
         # lock timer DOES NOT GET STARTED NOW: only starts with the very first call to lock_acquire
+        self.ip = ip
+        self.port = port
 
         self.port = port
 
@@ -263,17 +265,25 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=0)
 
     def serve(self):
+        self.raft_server = raft_server.RaftServer(self.ip, self.port)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-
+        raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
         lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)
-        
-        self.server.add_insecure_port("[::]:" + self.port)
+
+        self.server.add_insecure_port(f"[::]:{self.port}")
         self.server.start()
-        print("Server started, listening on " + self.port)
+        print("Server started, listening on ", self.port)
+        time.sleep(5)
+        print(f"Raft server {self.port} found leader: {self.raft_server.find_leader()}")
 
     def stop(self):
         self.lock_timer.cancel()
         self.server.stop(0)
+
+    def where_is_server(self, request, context):
+        ip = "0.0.0.0"
+        port = -1
+        return lock_pb2.ServerLocation(ip=ip, port=port)
 
 
 def create_files(n=100):
