@@ -41,8 +41,8 @@ class RaftServiceStub(object):
                 _registered_method=True)
         self.request_vote = channel.unary_unary(
                 '/raft_service.RaftService/request_vote',
-                request_serializer=raft__pb2.ReqVoteArgs.SerializeToString,
-                response_deserializer=raft__pb2.ReqVoteResponse.FromString,
+                request_serializer=raft__pb2.ElectionContest.SerializeToString,
+                response_deserializer=raft__pb2.ElectionContest.FromString,
                 _registered_method=True)
         self.are_you_leader = channel.unary_unary(
                 '/raft_service.RaftService/are_you_leader',
@@ -82,8 +82,8 @@ def add_RaftServiceServicer_to_server(servicer, server):
             ),
             'request_vote': grpc.unary_unary_rpc_method_handler(
                     servicer.request_vote,
-                    request_deserializer=raft__pb2.ReqVoteArgs.FromString,
-                    response_serializer=raft__pb2.ReqVoteResponse.SerializeToString,
+                    request_deserializer=raft__pb2.ElectionContest.FromString,
+                    response_serializer=raft__pb2.ElectionContest.SerializeToString,
             ),
             'are_you_leader': grpc.unary_unary_rpc_method_handler(
                     servicer.are_you_leader,
@@ -143,8 +143,8 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/request_vote',
-            raft__pb2.ReqVoteArgs.SerializeToString,
-            raft__pb2.ReqVoteResponse.FromString,
+            raft__pb2.ElectionContest.SerializeToString,
+            raft__pb2.ElectionContest.FromString,
             options,
             channel_credentials,
             insecure,

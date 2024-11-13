@@ -16,7 +16,6 @@ RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 class RaftServerState(Enum):
     LEADER = 1
     FOLLOWER = 2
-    CANDIDATE = 3
 
 
 # probably change these - raft paper says 150-300 ms
@@ -32,12 +31,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.server_ip = ip
         self.server_port = port
 
-        self.current_term = 0
-        self.voted_for = None
         self.log = []  # entries all of type LogEntry
-
-        self.commit_index = 0
-        self.last_applied = 0
 
         self.raft_servers = RAFT_SERVERS.copy()
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
@@ -48,7 +42,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             random.randint(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT),
             self.begin_election,
         )
-        self.election_lost = False
 
         if is_leader:
             self.leader_setup()
@@ -60,34 +53,12 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.state = RaftServerState.LEADER
         self.send_append_entries()  # TODO send empty heartbeats to all other servers so they know you're leader
 
-        self.next_index = dict()
-        self.match_index = dict()
-
-        for follower in self.raft_servers:
-            if self.log:
-                nextIndex = len(self.log)
-            else:
-                nextIndex = 0
-
-            self.next_index[follower] = nextIndex
-            self.match_index[follower] = nextIndex
-
-        # assumption: if leader elected, it is up-to-date
-        # TODO when leader comes online, tell LockServer to actually apply changes
 
     def follower_setup(self):
         self.state = RaftServerState.FOLLOWER  # placeholder
         print(f"Raft server {self.server_port}: Initialized as follower.")
 
         self.start_election_timer()
-
-        # is this needed??
-        # self.leader = self.find_leader()
-
-        # if self.leader:
-        #     print(f"Raft server {self.server_port}: Found leader: {self.leader}")
-        # else:
-        #     print(f"Raft server {self.server_port}: No leader found.")
 
     def establish_channels_stubs(self):
         self.channels = {}
@@ -163,75 +134,27 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         )
         self.election_timer.start()
 
-        self.current_election_tasks = []
-
-    def kill_election(self):
-        # new elections can start while a prior election is still running
-        # the old one needs to be 'killed' before the new one can start in earnest
-        if self.current_election_tasks:
-            print("Cancelling previous election tasks")
-            for task in self.current_election_tasks:
-                task.cancel()  # Cancel the previous election's tasks
-
-            self.current_election_tasks = []
-
-    def send_vote_requests(self):
-        # one asynchronous task per vote request
-        for server in self.raft_servers:
-            stub = self.stubs[server]
-
-            task = asyncio.create_task(
-                self.retry_rpc_call(
-                    stub.request_vote,
-                    raft_pb2.request_vote_args(
-                        term=self.current_term,
-                        candidateID=int(self.port),
-                        lastLogIndex=(len(self.log) - 1),
-                        lastLogTerm=self.log[-1].term,
-                    ),
-                )
-            )
-
-            self.current_election_tasks.append(task)
-
-    async def begin_election(self):
+    def begin_election(self):
         if self.state == RaftServerState.FOLLOWER:
-            self.kill_election()
+            generated_no = random.randint(1, 10)
 
-            self.state = RaftServerState.CANDIDATE
-            self.election_lost = False
-            self.current_term += 1
+            for server in self.raft_servers:
+                if server != self.leader: 
+                    # there is only one other follower
+                    response = self.retry_rpc_call(
+                        self.stubs[server].request_vote,
+                        raft_pb2.ElectionContest(
+                            generatedNo=generated_no
+                        )
+                    )
 
-            # candidate votes for itself
-            nr_votes_received = 1
-
-            # one asynchronous task per vote request -- tasks added to election tasks list
-            self.send_vote_requests()
-
-            # the election timer should be allowed to fire while waiting for votes
-            # but obviously begin_election is only called once the election timer has already concluded
-            # therefore, needs to be restarted here
-            self.start_election_timer()
-
-            # returns tasks in order of completion
-            for completed_task in asyncio.as_completed(self.current_election_tasks):
-                # counting votes
-                try:
-                    response = await completed_task
-                    if response.voteGranted:
-                        nr_votes_received += 1
-
-                    # election WIN
-                    if nr_votes_received >= 2:
-                        print("Cancelling remaining tasks - this one is the new leader")
+                    if response.generatedNo < generated_no:
+                        self.leader = server
+                        self.
+                    elif response.generatedNo > generated_no:
                         self.leader_setup()
-
-                        for task in self.current_election_tasks:
-                            task.cancel()  # Cancel remaining tasks
-                        break
-
-                except asyncio.CancelledError:
-                    print("Task was cancelled")
+                    else:
+                        self.start_election_timer()
 
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entries(self, request, context):
@@ -281,22 +204,17 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # this bit is executed on the voters, not the candidate - this is the CONSEQUENCE of the RPC call, not the call itself
     def request_vote(self, request, context):
         # return super().request_vote(request, context)
-        candidate_term = request.term
-        candidate_id = request.candidateID
-        candidate_last_log_index = request.lastLogIndex
-        candidate_last_log_term = request.lastLogTerm
+        generated_no = random.randint(1, 10)
+        
+        self.election_timer.cancel()
 
-        if candidate_term >= self.current_term:
-            if not self.voted_for or self.voted_for == candidate_id:
-                if (
-                    self.log[-1].term <= candidate_last_log_term
-                    or len(self.log) - 1 <= candidate_last_log_index
-                ):
-                    return raft_pb2.ReqVoteResponse(
-                        term=self.current_term, voteGranted=True
-                    )
-
-        return raft_pb2.ReqVoteResponse(term=self.current_term, voteGranted=False)
+        if request.generated_no > generated_no:
+            self.leader = context.peer()
+            self.follower_setup()
+        elif request.generated_no < generated_no:
+            self.leader_setup()
+        
+        return raft_pb2.ElectionContest(generatedNo=generated_no)
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entries(self, entries: List[log.LogEntry]):
