@@ -243,18 +243,40 @@ class Client:
         print(f"Client {self.client_id}: Attempting to recover lost calls.")
         for i in range(seq, self.seq):
             if self.request_history[i][0] == "lock_acquire":
-                self.RPC_lock_acquire()
-            elif self.request_history[i][0] == "file_append":
-                self.RPC_append_file(
-                    self.request_history[i][1], self.request_history[i][2]
+                response = self.retry_rpc_call(
+                    self.stub.lock_acquire,
+                    lock_pb2.lock_args(client_id=self.client_id, seq=i),
                 )
-            elif self.request_history[i][0] == "lock_release":
-                self.RPC_lock_release()
+            elif self.request_history[i][0] == "file_append":
+                response = self.retry_rpc_call(
+                    self.stub.file_append,
+                    lock_pb2.file_args(
+                        filename=f"file_{self.request_history[i][1]}",
+                        content=f"{self.request_history[i][2]}".encode(),
+                        client_id=self.client_id,
+                        seq=i,
+                    ),
+                )
+            elif self.request_history[i] == "lock_release":
+                response = self.retry_rpc_call(
+                    self.stub.lock_release,
+                    lock_pb2.lock_args(client_id=self.client_id, seq=i),
+                )
             else:
                 print(
-                    f"Client {self.client_id}: Could not recover request {i}: {self.request_history[i]}"
+                    f"Client {self.client_id}: Unknown request type {self.request_history[i][0]}"
                 )
-                break
+                return False
+            if response and response.status == lock_pb2.Status.SUCCESS:
+                print(
+                    f"Client {self.client_id}: Recovered request {i}: "
+                    + status_str(response.status)
+                )
+                self.seq = response.seq
+            else:
+                print(f"Client {self.client_id}: Failed to recover request {i}.")
+                return False
+        return True
 
 
 # def run():
