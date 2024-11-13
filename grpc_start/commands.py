@@ -1,0 +1,21 @@
+class Command:
+    pass
+
+class AddClientCommand(Command):
+    def __init__(self, client_id: int):
+        self.client_id = client_id
+
+class ChangeLockHolderCommand(Command):
+    def __init__(self, client_id: int):
+        self.client_id = client_id
+
+class IncrementNewClientIDCommand(Command):
+    pass
+
+class AddAppendCommand(Command):
+    def __init__(self, filename: str, content: bytes):
+        self.filename = filename
+        self.content = content
+
+class ExecuteAppendsCommand(Command):
+    pass

@@ -8,6 +8,10 @@ sys.path.append(str(root_directory))
 
 from grpc_start.client import Client # noqa: E402
 from grpc_start.server import LockServer, reset_files  # noqa: E402
+import lock_pb2_grpc
+
+import grpc
+import futures
 
 FILE_PATH = "files/"
 
@@ -17,8 +21,8 @@ def test_packet_delay():
     client2 = Client()
 
     server = LockServer()
-
     server.serve()
+    
     print("Server started")
     # test packet delay
     client1.RPC_client_init()

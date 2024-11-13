@@ -12,7 +12,8 @@ import grpc
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-from grpc_start import lock_pb2, lock_pb2_grpc  # noqa: E402
+from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server # noqa: E402
+from grpc_start import commands as cs
 
 # The server is required to have the following functionality:
 # 1.  Create 100 files that clients can write. The file name should strictly follow this format "file_0", "file_1", ..., "file_99".
@@ -25,7 +26,7 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self):
+    def __init__(self, port):
         self.lock_owner = None # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {} # needs to be synced - 'add client' action, 'increment client's expected seq number' action
@@ -36,6 +37,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock) # would be difficult and stupid to sync
         # lock timer DOES NOT GET STARTED NOW: only starts with the very first call to lock_acquire
+
+        self.port = port
 
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
@@ -253,12 +256,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=0)
 
     def serve(self):
-        port = "50051"
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        lock_pb2_grpc.add_LockServiceServicer_to_server(LockServer(), self.server)
-        self.server.add_insecure_port("[::]:" + port)
+
+        lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)
+        
+        self.server.add_insecure_port("[::]:" + self.port)
         self.server.start()
-        print("Server started, listening on " + port)
+        print("Server started, listening on " + self.port)
 
     def stop(self):
         self.lock_timer.cancel()
@@ -267,7 +271,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
 def create_files(n=100):
     # needs to be modified to account for multiple servers
-    
+
     # create directory & files if necessary:
     if not os.path.exists("./files"):
         os.makedirs("./files")
