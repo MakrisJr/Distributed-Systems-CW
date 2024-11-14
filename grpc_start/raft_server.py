@@ -258,3 +258,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             log_grpcs.append(log.log_entry_object_to_grpc(entry))
 
         return raft_pb2.RecoveryResponse(log=log_grpcs)
+    
+    def is_leader(self):
+        return self.state == RaftServerState.LEADER
