@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import raft_pb2 as raft__pb2
+from grpc_start import raft_pb2 as grpc__start_dot_raft__pb2
 
 GRPC_GENERATED_VERSION = '1.67.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in raft_pb2_grpc.py depends on'
+        + f' but the generated code in grpc_start/raft_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,39 +34,39 @@ class RaftServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.append_entries = channel.unary_unary(
-                '/raft_service.RaftService/append_entries',
-                request_serializer=raft__pb2.AppendArgs.SerializeToString,
-                response_deserializer=raft__pb2.AppendResponse.FromString,
+        self.append_entry = channel.unary_unary(
+                '/raft_service.RaftService/append_entry',
+                request_serializer=grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
                 _registered_method=True)
-        self.request_vote = channel.unary_unary(
-                '/raft_service.RaftService/request_vote',
-                request_serializer=raft__pb2.ReqVoteArgs.SerializeToString,
-                response_deserializer=raft__pb2.ReqVoteResponse.FromString,
+        self.where_is_leader = channel.unary_unary(
+                '/raft_service.RaftService/where_is_leader',
+                request_serializer=grpc__start_dot_raft__pb2.Empty.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.String.FromString,
                 _registered_method=True)
-        self.are_you_leader = channel.unary_unary(
-                '/raft_service.RaftService/are_you_leader',
-                request_serializer=raft__pb2.Empty.SerializeToString,
-                response_deserializer=raft__pb2.Bool.FromString,
+        self.recover_logs = channel.unary_unary(
+                '/raft_service.RaftService/recover_logs',
+                request_serializer=grpc__start_dot_raft__pb2.Int.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.RecoveryResponse.FromString,
                 _registered_method=True)
 
 
 class RaftServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def append_entries(self, request, context):
+    def append_entry(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def request_vote(self, request, context):
+    def where_is_leader(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def are_you_leader(self, request, context):
+    def recover_logs(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -75,20 +75,20 @@ class RaftServiceServicer(object):
 
 def add_RaftServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'append_entries': grpc.unary_unary_rpc_method_handler(
-                    servicer.append_entries,
-                    request_deserializer=raft__pb2.AppendArgs.FromString,
-                    response_serializer=raft__pb2.AppendResponse.SerializeToString,
+            'append_entry': grpc.unary_unary_rpc_method_handler(
+                    servicer.append_entry,
+                    request_deserializer=grpc__start_dot_raft__pb2.AppendArgs.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
             ),
-            'request_vote': grpc.unary_unary_rpc_method_handler(
-                    servicer.request_vote,
-                    request_deserializer=raft__pb2.ReqVoteArgs.FromString,
-                    response_serializer=raft__pb2.ReqVoteResponse.SerializeToString,
+            'where_is_leader': grpc.unary_unary_rpc_method_handler(
+                    servicer.where_is_leader,
+                    request_deserializer=grpc__start_dot_raft__pb2.Empty.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.String.SerializeToString,
             ),
-            'are_you_leader': grpc.unary_unary_rpc_method_handler(
-                    servicer.are_you_leader,
-                    request_deserializer=raft__pb2.Empty.FromString,
-                    response_serializer=raft__pb2.Bool.SerializeToString,
+            'recover_logs': grpc.unary_unary_rpc_method_handler(
+                    servicer.recover_logs,
+                    request_deserializer=grpc__start_dot_raft__pb2.Int.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.RecoveryResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -102,7 +102,7 @@ class RaftService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def append_entries(request,
+    def append_entry(request,
             target,
             options=(),
             channel_credentials=None,
@@ -115,9 +115,9 @@ class RaftService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/raft_service.RaftService/append_entries',
-            raft__pb2.AppendArgs.SerializeToString,
-            raft__pb2.AppendResponse.FromString,
+            '/raft_service.RaftService/append_entry',
+            grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+            grpc__start_dot_raft__pb2.Bool.FromString,
             options,
             channel_credentials,
             insecure,
@@ -129,7 +129,7 @@ class RaftService(object):
             _registered_method=True)
 
     @staticmethod
-    def request_vote(request,
+    def where_is_leader(request,
             target,
             options=(),
             channel_credentials=None,
@@ -142,9 +142,9 @@ class RaftService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/raft_service.RaftService/request_vote',
-            raft__pb2.ReqVoteArgs.SerializeToString,
-            raft__pb2.ReqVoteResponse.FromString,
+            '/raft_service.RaftService/where_is_leader',
+            grpc__start_dot_raft__pb2.Empty.SerializeToString,
+            grpc__start_dot_raft__pb2.String.FromString,
             options,
             channel_credentials,
             insecure,
@@ -156,7 +156,7 @@ class RaftService(object):
             _registered_method=True)
 
     @staticmethod
-    def are_you_leader(request,
+    def recover_logs(request,
             target,
             options=(),
             channel_credentials=None,
@@ -169,9 +169,9 @@ class RaftService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/raft_service.RaftService/are_you_leader',
-            raft__pb2.Empty.SerializeToString,
-            raft__pb2.Bool.FromString,
+            '/raft_service.RaftService/recover_logs',
+            grpc__start_dot_raft__pb2.Int.SerializeToString,
+            grpc__start_dot_raft__pb2.RecoveryResponse.FromString,
             options,
             channel_credentials,
             insecure,

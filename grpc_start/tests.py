@@ -318,6 +318,8 @@ def test_stuck_after_editing_file():
 
 
 def test_raft():
+    # remove files in ./log/
+    reset_files()
     server1 = LockServer("localhost", 50051)
     server2 = LockServer("localhost", 50052)
     server3 = LockServer("localhost", 50053)
@@ -329,6 +331,11 @@ def test_raft():
     thread1.start()
     thread2.start()
     thread3.start()
+
+    time.sleep(7)
+
+    client1 = Client()
+    client1.RPC_client_init()
 
     time.sleep(15)
 

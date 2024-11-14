@@ -47,6 +47,21 @@ class Client:
     def RPC_client_init(self):
         try:
             response = self.stub.client_init(lock_pb2.Int(rc=self.client_id))
+
+            if response and len(str(response.leader)):
+                print("accidentally contacted follower - retry")
+
+                # update channel and stub info to point to new leader
+                leader_str = str(response.leader)
+
+                self.server_ip = leader_str.split(":")[0]
+                self.server_port = leader_str.split(":")[1]
+                self.channel = grpc.insecure_channel(
+                    f"{self.server_ip}:{self.server_port}"
+                )
+                self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+
+                return self.RPC_client_init()
             self.client_id = response.rc
             self.seq = response.seq  # sequence number of next expected request
             if DEBUG:
@@ -63,12 +78,22 @@ class Client:
         for attempt in range(RETRY_LIMIT):
             try:
                 response = rpc_func(*args, **kwargs)
+                if len(str(response.leader)):
+                    # update channel and stub info to point to new leader
+                    leader_str = str(response.leader)
+
+                    self.server_ip = leader_str.split(":")[0]
+                    self.server_port = leader_str.split(":")[1]
+                    self.channel = grpc.insecure_channel(
+                        f"{self.server_ip}:{self.server_port}"
+                    )
+                    self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
                 return response
             except grpc.RpcError as e:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                self.where_is_server()
+                self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -81,7 +106,12 @@ class Client:
             self.stub.lock_acquire,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
-        if response and response.status == lock_pb2.Status.SEQ_ERROR:
+
+        if response and len(str(response.leader)):
+            print("accidentally contacted follower - retry")
+
+            return self.RPC_lock_acquire()
+        elif response and response.status == lock_pb2.Status.SEQ_ERROR:
             print(f"Client {self.client_id}: Sequence error. Need to recover.")
             if DEBUG:
                 print(
@@ -124,7 +154,14 @@ class Client:
         )
         if lost_after_server:
             return False
-        if response and response.status == lock_pb2.Status.SUCCESS:
+
+        if response and len(str(response.leader)):
+            print("accidentally contacted follower - retry")
+
+            return self.RPC_append_file(
+                file_number, text, lost_before_server, lost_after_server
+            )  # potential infinite recursion????
+        elif response and response.status == lock_pb2.Status.SUCCESS:
             print(
                 f"Client {self.client_id}: file_append received: "
                 + status_str(response.status)
@@ -148,6 +185,7 @@ class Client:
             print(f"Client {self.client_id}: Lock expired. Need to recover.")
             self.seq = response.seq
             return False
+
         else:  # response and response.status == lock_pb2.Status.FILE_ERROR:
             print(
                 f"Client {self.client_id}: Failed to append file after {RETRY_LIMIT} retries."
@@ -160,7 +198,12 @@ class Client:
             self.stub.lock_release,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
-        if response and response.status == lock_pb2.Status.SUCCESS:
+
+        if response and len(str(response.leader)):
+            print("accidentally contacted follower - retry")
+
+            return self.RPC_lock_release()
+        elif response and response.status == lock_pb2.Status.SUCCESS:
             print(
                 f"Client {self.client_id}: lock_release received: "
                 + status_str(response.status)
@@ -189,7 +232,12 @@ class Client:
         response = self.retry_rpc_call(
             self.stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )
-        if response and response.status == lock_pb2.Status.SUCCESS:
+
+        if response and len(str(response.leader)):
+            print("accidentally contacted follower - retry")
+
+            self.RPC_client_close()
+        elif response and response.status == lock_pb2.Status.SUCCESS:
             print(
                 f"Client {self.client_id}: client_close received: "
                 + status_str(response.status)

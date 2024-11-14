@@ -1,109 +1,108 @@
-import asyncio
+import json
+import os
 import random
 import threading
 import time
 from enum import Enum
-from typing import List
+
+# idiot workaround lmao
+from typing import TYPE_CHECKING
 
 import grpc
 
 from grpc_start import log_entries as log
-from grpc_start import raft_pb2, raft_pb2_grpc  # noqa: F401
+from grpc_start import raft_pb2, raft_pb2_grpc, server  # noqa: F401
+
+if TYPE_CHECKING:
+    pass
 
 RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 
 
-class RaftServerState(Enum):
+class RaftServerState(Enum):  # if this is either-or, could just be a bool surely
     LEADER = 1
     FOLLOWER = 2
 
 
-# probably change these - raft paper says 150-300 ms
-MIN_ELECTION_TIMEOUT = 1
-MAX_ELECTION_TIMEOUT = 10
+LEADER_HEARTBEAT_TIMEOUT = 0.1
+MIN_LEADER_CHANGE_TIMEOUT = 0.5
+MAX_LEADER_CHANGE_TIMEOUT = 2
 
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
 
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
-    def __init__(self, ip, port, is_leader=False):
+    def __init__(self, ip, port, log_file_path, lock_server, is_leader=False):
         self.server_ip = ip
         self.server_port = port
 
-        self.current_term = 0
-        self.voted_for = None
         self.log = []  # entries all of type LogEntry
-
-        self.commit_index = 0
-        self.last_applied = 0
+        self.log_file_path = log_file_path
+        self.new_leader_timeout = None
+        self.lock_server = lock_server  # reference to the parent LockServer
 
         self.raft_servers = RAFT_SERVERS.copy()
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
         self.establish_channels_stubs()
 
-        self.election_timer = threading.Timer(
-            random.randint(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT),
-            self.begin_election,
-        )
-        self.election_lost = False
+        self.leader = None
 
-        if is_leader:
-            self.leader_setup()
+        if os.path.exists(self.log_file_path):
+            # assuming that if log file exists, that means this server died and came back
+            self.initiate_recovery()
         else:
-            self.follower_setup()
+            # create path and file if they dont exist
+            os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+            open(self.log_file_path, "w").close()
+            if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
+                self.leader_start()
+            else:
+                self.follower_start()
 
-    def leader_setup(self):
+    def leader_start(self):
         # called when first coming into power
         self.state = RaftServerState.LEADER
-        self.send_append_entries()  # TODO send empty heartbeats to all other servers so they know you're leader
+        self.leader = f"{self.server_ip}:{self.server_port}"
+        self.send_append_entry_rpcs(
+            entry=None
+        )  # TODO send heartbeats to all other servers so they know you're leader
 
-        self.next_index = dict()
-        self.match_index = dict()
+        if self.new_leader_timeout:
+            self.new_leader_timeout.cancel()
 
-        for follower in self.raft_servers:
-            if self.log:
-                nextIndex = len(self.log)
-            else:
-                nextIndex = 0
+        heartbeat_thread = threading.Thread(target=self.send_heartbeats)
+        heartbeat_thread.start()
 
-            self.next_index[follower] = nextIndex
-            self.match_index[follower] = nextIndex
+    def send_heartbeats(self):
+        while self.state == RaftServerState.LEADER:
+            # print(f"Raft server {self.server_port}: Sending heartbeat.")
+            self.send_append_entry_rpcs(entry=None)
+            time.sleep(LEADER_HEARTBEAT_TIMEOUT)
 
-        # assumption: if leader elected, it is up-to-date
-        # TODO when leader comes online, tell LockServer to actually apply changes
+        exit()
 
-    def follower_setup(self):
+    def follower_start(self):
         self.state = RaftServerState.FOLLOWER  # placeholder
         print(f"Raft server {self.server_port}: Initialized as follower.")
 
-        self.start_election_timer()
-
-        # is this needed??
-        # self.leader = self.find_leader()
-
-        # if self.leader:
-        #     print(f"Raft server {self.server_port}: Found leader: {self.leader}")
-        # else:
-        #     print(f"Raft server {self.server_port}: No leader found.")
+        self.start_new_leader_timer()
 
     def establish_channels_stubs(self):
         self.channels = {}
         self.stubs = {}
 
-        print(f"SERVER LIST: {self.raft_servers}")
-        for server in self.raft_servers:
+        for raft_node in self.raft_servers:
             try:
-                print(f"Raft server {self.server_port}: Connecting to {server}")
-                channel = grpc.insecure_channel(server)
+                channel = grpc.insecure_channel(raft_node)
                 stub = raft_pb2_grpc.RaftServiceStub(channel)
-                self.channels[server] = channel
-                self.stubs[server] = stub
-
+                self.channels[raft_node] = channel
+                self.stubs[raft_node] = stub
+                print(f"{self.server_port}: Connected to {raft_node}")
             except grpc.RpcError as e:
                 print(
-                    f"Raft server {self.server_port}: Error connecting to {server}: {e}"
+                    f"Raft server {self.server_port}: Error connecting to {raft_node}: {e}"
                 )
                 continue
 
@@ -125,171 +124,154 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         return None
 
     def find_leader(self):
-        for server in self.raft_servers:
-            try:
-                print(
-                    f"Raft server {self.server_port}: Checking if {server} is leader."
-                )
-                response = self.retry_rpc_call(
-                    self.stubs[server].are_you_leader, raft_pb2.Empty()
-                )
-                if response == raft_pb2.Bool(value=True):
-                    print(f"Raft server {self.server_port}: Found leader: {server}")
-                    self.leader = server
-                    return response
-            except grpc.RpcError as e:
-                print(f"Raft server {self.server_port}: Error finding leader: {e}")
-                continue
-        self.leader = None
-
-        return None
-
-    def are_you_leader(self, request, context):
-        print(f"Raft server {self.server_port}: are_you_leader called.")
-        if self.state == RaftServerState.LEADER:
-            return raft_pb2.Bool(value=True)
-        else:
-            return raft_pb2.Bool(value=False)
-
-    def start_election_timer(self):
-        """Start or restart the election timer for this Raft node."""
-        if self.election_timer:
-            self.election_timer.cancel()
-
-        self.election_timer = threading.Timer(
-            random.randint(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT),
-            self.begin_election,
-        )
-        self.election_timer.start()
-
-        self.current_election_tasks = []
-
-    def kill_election(self):
-        # new elections can start while a prior election is still running
-        # the old one needs to be 'killed' before the new one can start in earnest
-        if self.current_election_tasks:
-            print("Cancelling previous election tasks")
-            for task in self.current_election_tasks:
-                task.cancel()  # Cancel the previous election's tasks
-
-            self.current_election_tasks = []
-
-    def send_vote_requests(self):
-        # one asynchronous task per vote request
-        for server in self.raft_servers:
-            stub = self.stubs[server]
-
-            task = asyncio.create_task(
-                self.retry_rpc_call(
-                    stub.request_vote,
-                    raft_pb2.request_vote_args(
-                        term=self.current_term,
-                        candidateID=int(self.port),
-                        lastLogIndex=(len(self.log) - 1),
-                        lastLogTerm=self.log[-1].term,
-                    ),
-                )
-            )
-
-            self.current_election_tasks.append(task)
-
-    async def begin_election(self):
-        if self.state == RaftServerState.FOLLOWER:
-            self.kill_election()
-
-            self.state = RaftServerState.CANDIDATE
-            self.election_lost = False
-            self.current_term += 1
-
-            # candidate votes for itself
-            nr_votes_received = 1
-
-            # one asynchronous task per vote request -- tasks added to election tasks list
-            self.send_vote_requests()
-
-            # the election timer should be allowed to fire while waiting for votes
-            # but obviously begin_election is only called once the election timer has already concluded
-            # therefore, needs to be restarted here
-            self.start_election_timer()
-
-            # returns tasks in order of completion
-            for completed_task in asyncio.as_completed(self.current_election_tasks):
-                # counting votes
+        while True:
+            print(f"Raft server {self.server_port}: Finding leader.")
+            for server in self.raft_servers:
                 try:
-                    response = await completed_task
-                    if response.voteGranted:
-                        nr_votes_received += 1
+                    response = self.stubs[server].where_is_leader(raft_pb2.Empty())
+                    if len(response.value) > 0:
+                        print(
+                            f"Raft server {self.server_port}: Found leader: {response.value}"
+                        )
+                        self.leader = response.value
+                        return response.value
+                except grpc.RpcError:
+                    print(
+                        f"Raft server {self.server_port}: failed to contact node {server}"
+                    )
+                    continue
 
-                    # election WIN
-                    if nr_votes_received >= 2:
-                        print("Cancelling remaining tasks - this one is the new leader")
-                        self.leader_setup()
+    def where_is_leader(self, request, context):
+        return raft_pb2.String(value=self.leader)
 
-                        for task in self.current_election_tasks:
-                            task.cancel()  # Cancel remaining tasks
-                        break
+    def start_new_leader_timer(self):
+        """Start or restart the 'new leader' timer for this Raft node."""
+        if self.new_leader_timeout and self.new_leader_timeout.is_alive():
+            self.new_leader_timeout.cancel()
 
-                except asyncio.CancelledError:
-                    print("Task was cancelled")
+        self.new_leader_timeout = threading.Timer(
+            random.uniform(MIN_LEADER_CHANGE_TIMEOUT, MAX_LEADER_CHANGE_TIMEOUT),
+            self.become_new_leader,
+        )
+
+        self.new_leader_timeout.start()
+
+    def become_new_leader(self):
+        """The follower that detects the absence of the leader first becomes the new leader"""
+        if self.state == RaftServerState.FOLLOWER:
+            self.leader_start()
+
+    def serialise_log(self):
+        """Converts self.log to json file"""
+        with open(self.log_file_path, "w") as f:
+            json.dump([entry.toJson() for entry in self.log], f)
+
+    def deserialise_log(self):
+        """Reads from logfile into self.log"""
+        try:
+            with open(self.log_file_path, "r") as f:
+                self.log = json.load(f)
+        except FileNotFoundError:
+            print("Log file not found.")
+        except json.JSONDecodeError:
+            print("Log file is not a valid JSON.")
 
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
-    def append_entries(self, request, context):
-        # Step 1
-        if request.term < self.current_term:
-            return raft_pb2.AppendResponse(term=self.current_term, success=False)
+    def append_entry(self, request, context):
+        # if we receive an append_entries message, we know not to become the new leader
 
-        if request.term > self.current_term:
-            self.current_term = request.term
-            self.voted_for = None
+        self.state = RaftServerState.FOLLOWER
+        self.start_new_leader_timer()
+        self.leader = request.leaderID
+        # print("REQUEST: ", request.entry)
 
-            self.kill_election()  # if any election running on this node, force-kills it
-            self.state = RaftServerState.FOLLOWER
+        if len(str(request.entry)) > 0:
+            log_entry = log.log_entry_grpc_to_object(request.entry)
+            self.log.append(log_entry)
+            self.serialise_log()
 
-            self.leader = request.leaderID
+            command = log_entry.command
+            self.lock_server.commit_command(command)
+        # else:
+        #     print("heartbeat")
 
-        # Step 2
-        if (
-            len(self.log) <= request.prevLogIndex
-            and self.log[request.prevLogIndex].term != request.prevLogIndex
-        ):
-            return raft_pb2.AppendResponse(term=self.current_term, success=False)
+        return raft_pb2.Bool(value=True)
 
-        # Step 3
-        index = request.prevLogIndex + 1
-        i = 0
-        for i, entry in enumerate(request.entries):
-            if index < len(self.log):
-                if self.log[index].term != entry.term:
-                    self.log = self.log[:index]
-                    break
-            else:
-                break
-            index += 1
-
-        # Step 4
-        if request.entries:
-            for entry in request.entries[i:]:
-                self.log.append(log.log_entry_grpc_to_object(entry))
-
-        # Step 5
-        if request.leaderCommit > self.commit_index:
-            self.commit_index = min(request.leaderCommit, len(self.log) - 1)
-
-        return raft_pb2.AppendResponse(term=self.current_term, success=True)
-
-    # this bit is executed on the voters, not the candidate - this is the CONSEQUENCE of the RPC call, not the call itself
-    def request_vote(self, request, context):
-        candidate_generated_no = request.generatedNo
-        candidate_id = request.leaderID
-
-        if candidate_generated_no > self.generated_no or (
-            candidate_generated_no == self.generated_no and candidate_id > self.id
-        ):
-            return raft_pb2.ReqVoteResponse(voteGranted=True)
-
-        return raft_pb2.ReqVoteResponse(voteGranted=False)
+        # in what scenario does it return false?
 
     # this is where this server calls the append_entries rpc on other servers
-    def send_append_entries(self, entries: List[log.LogEntry]):
+    def send_append_entry_rpcs(self, entry: log.LogEntry):
+        print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
-            raise NotImplementedError
+            print(f"Leader is {self.server_port}, {self.leader}")
+            # TODO: make asynchronous?
+            for raft_node in self.raft_servers:
+                try:
+                    if entry:
+                        print(f"Sending append_entry {entry.command} to {raft_node}")
+                        print(f"Type of command: {type(entry.command)}")
+                        self.retry_rpc_call(
+                            self.stubs[raft_node].append_entry,
+                            raft_pb2.AppendArgs(
+                                leaderID=f"{self.server_ip}:{self.server_port}",
+                                entry=log.log_entry_object_to_grpc(entry),
+                            ),
+                        )
+                    else:
+                        # print("Sending heartbeat")
+                        response = self.retry_rpc_call(
+                            self.stubs[raft_node].append_entry,
+                            raft_pb2.AppendArgs(
+                                leaderID=f"{self.server_ip}:{self.server_port}",
+                                entry=None,
+                            ),
+                        )
+
+                except grpc.RpcError as e:
+                    print(
+                        f"Raft server {self.server_port}: Error sending append_entry RPC to {raft_node}: {e}"
+                    )
+                    # remove node from raft_servers
+                    self.raft_servers.remove(raft_node)
+                    continue
+
+            # execute command itself
+            if entry:
+                self.log.append(entry)
+                self.serialise_log()
+                self.lock_server.commit_command(entry.command)
+
+    # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
+    def initiate_recovery(self):
+        self.state = RaftServerState.FOLLOWER
+        self.deserialise_log()  # get cached log entries
+        self.leader = self.find_leader()
+
+        # get missing log entries (if any) from leader
+        missing_log_grpcs = self.retry_rpc_call(
+            self.stubs[self.leader].recover_logs, raft_pb2.Int(value=len(self.log))
+        )
+        if missing_log_grpcs:
+            for log_grpc in missing_log_grpcs:
+                self.log.append(log.log_entry_grpc_to_object(log_grpc))
+
+        for entry in self.log:
+            self.lock_server.commit_command(entry.command)
+
+        # now that this is an up-to-date follower, allow it to potentially become the leader
+        self.start_new_leader_timer()
+
+    # leader helpfully returns missing logs to idiot follower who had the temerity to die
+    def recover_logs(self, request, context):
+        follower_log_length = request.value
+
+        remaining_log = self.log[follower_log_length:]
+        log_grpcs = []
+
+        for entry in remaining_log:
+            log_grpcs.append(log.log_entry_object_to_grpc(entry))
+
+        return raft_pb2.RecoveryResponse(log=log_grpcs)
+
+    def is_leader(self):
+        return self.state == RaftServerState.LEADER

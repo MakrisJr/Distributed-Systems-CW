@@ -7,6 +7,7 @@ package raft_service;
 // add client to self.clients
 message AddClientCommand {
     int32 client_id = 1;
+    string client_ip = 2;
 }
 
 // increment the expected sequence no in self.clients[client_id]
@@ -18,9 +19,6 @@ message ChangeLockHolderCommand {
     int32 client_id = 1;
 }
 
-// increment ID assigned to new clients
-message IncrementNewClientIDCommand {}
-
 // add a file append operation to local queue of appends
 message AddAppendCommand {
     string filename = 1;
@@ -30,22 +28,26 @@ message AddAppendCommand {
 // execute all appends in queue
 message ExecuteAppendsCommand {}
 
+message RemoveClientCommand{
+    int32 client_id = 1;
+}
+
 message LogEntry {
     // only one command per log entry!
     oneof command {
-        AddClientCommand add_client = 2;
-        IncrementClientSeqCommand increment_client_seq = 3;
-        ChangeLockHolderCommand change_lock_holder = 4;
-        IncrementNewClientIDCommand increment_new_client_id = 5;
-        AddAppendCommand add_append = 6;
-        ExecuteAppendsCommand execute_appends = 7;
+        AddClientCommand add_client = 1;
+        IncrementClientSeqCommand increment_client_seq = 2;
+        ChangeLockHolderCommand change_lock_holder = 3;
+        AddAppendCommand add_append = 4;
+        ExecuteAppendsCommand execute_appends = 5;
+        RemoveClientCommand remove_client = 6;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }
 
 message AppendArgs{
-    string leaderID = 2; // so follower can redirect clients
-    LogEntry entry = 4; // log entries for followers to append
+    string leaderID = 1; // so follower can redirect clients
+    LogEntry entry = 2; // log entries for followers to append
     // no entry == heartbeat
 }
 
@@ -57,23 +59,18 @@ message Int {
     int32 value = 1;
 }
 
-message ElectionContest{
-    int32 generatedNo = 1;
-}
-
-message AppendResponse {
-    bool success = 2; // true if follower  successfully executed
-}
-
 message Bool {
     bool value = 1;
+}
+
+message String {
+    string value = 1;
 }
 
 message Empty {}
 
 service RaftService {
-    rpc append_entry(AppendArgs) returns (AppendResponse);
-    rpc request_vote(ElectionContest) returns (ElectionContest);
-    rpc are_you_leader(Empty) returns (Bool);
+    rpc append_entry(AppendArgs) returns (Bool);
+    rpc where_is_leader(Empty) returns (String);
     rpc recover_logs(Int) returns (RecoveryResponse);
 }
