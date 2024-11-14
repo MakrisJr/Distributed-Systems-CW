@@ -193,10 +193,11 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
         if self.state == RaftServerState.LEADER:
+            # TODO: make asynchronous?
             for raft_node in self.raft_servers:
                 try:
                     if entry:
-                        response = self.retry_rpc_call(
+                        self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
                                 leaderID=f"{self.server_ip}:{self.server_port}",
@@ -205,7 +206,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         )
                     else:
                         print("Sending heartbeat")
-                        response = self.retry_rpc_call(
+                        self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
                                 leaderID=f"{self.server_ip}:{self.server_port}",

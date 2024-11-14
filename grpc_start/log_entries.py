@@ -4,7 +4,7 @@ from grpc_start import raft_pb2
 
 
 class LogEntry:
-    def __init__(self, term: int, command: cs.Command):
+    def __init__(self, command: cs.Command):
         self.command = command
 
 
