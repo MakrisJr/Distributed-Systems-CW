@@ -68,7 +68,7 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                self.where_is_server()
+                self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(

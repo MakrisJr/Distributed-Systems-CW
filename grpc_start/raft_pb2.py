@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x0craft_service\"%\n\x10\x41\x64\x64\x43lientCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\".\n\x19IncrementClientSeqCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\",\n\x17\x43hangeLockHolderCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\"\x1d\n\x1bIncrementNewClientIDCommand\"5\n\x10\x41\x64\x64\x41ppendCommand\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\"\x17\n\x15\x45xecuteAppendsCommand\"\x9d\x03\n\x08LogEntry\x12\x34\n\nadd_client\x18\x02 \x01(\x0b\x32\x1e.raft_service.AddClientCommandH\x00\x12G\n\x14increment_client_seq\x18\x03 \x01(\x0b\x32\'.raft_service.IncrementClientSeqCommandH\x00\x12\x43\n\x12\x63hange_lock_holder\x18\x04 \x01(\x0b\x32%.raft_service.ChangeLockHolderCommandH\x00\x12L\n\x17increment_new_client_id\x18\x05 \x01(\x0b\x32).raft_service.IncrementNewClientIDCommandH\x00\x12\x34\n\nadd_append\x18\x06 \x01(\x0b\x32\x1e.raft_service.AddAppendCommandH\x00\x12>\n\x0f\x65xecute_appends\x18\x07 \x01(\x0b\x32#.raft_service.ExecuteAppendsCommandH\x00\x42\t\n\x07\x63ommand\"E\n\nAppendArgs\x12\x10\n\x08leaderID\x18\x02 \x01(\t\x12%\n\x05\x65ntry\x18\x04 \x01(\x0b\x32\x16.raft_service.LogEntry\"&\n\x0f\x45lectionContest\x12\x13\n\x0bgeneratedNo\x18\x01 \x01(\x05\"!\n\x0e\x41ppendResponse\x12\x0f\n\x07success\x18\x02 \x01(\x08\"\x15\n\x04\x42ool\x12\r\n\x05value\x18\x01 \x01(\x08\"\x07\n\x05\x45mpty2\xe0\x01\n\x0bRaftService\x12H\n\x0e\x61ppend_entries\x12\x18.raft_service.AppendArgs\x1a\x1c.raft_service.AppendResponse\x12L\n\x0crequest_vote\x12\x1d.raft_service.ElectionContest\x1a\x1d.raft_service.ElectionContest\x12\x39\n\x0e\x61re_you_leader\x12\x13.raft_service.Empty\x1a\x12.raft_service.Boolb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x0craft_service\"%\n\x10\x41\x64\x64\x43lientCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\".\n\x19IncrementClientSeqCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\",\n\x17\x43hangeLockHolderCommand\x12\x11\n\tclient_id\x18\x01 \x01(\x05\"\x1d\n\x1bIncrementNewClientIDCommand\"5\n\x10\x41\x64\x64\x41ppendCommand\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\"\x17\n\x15\x45xecuteAppendsCommand\"\x9d\x03\n\x08LogEntry\x12\x34\n\nadd_client\x18\x02 \x01(\x0b\x32\x1e.raft_service.AddClientCommandH\x00\x12G\n\x14increment_client_seq\x18\x03 \x01(\x0b\x32\'.raft_service.IncrementClientSeqCommandH\x00\x12\x43\n\x12\x63hange_lock_holder\x18\x04 \x01(\x0b\x32%.raft_service.ChangeLockHolderCommandH\x00\x12L\n\x17increment_new_client_id\x18\x05 \x01(\x0b\x32).raft_service.IncrementNewClientIDCommandH\x00\x12\x34\n\nadd_append\x18\x06 \x01(\x0b\x32\x1e.raft_service.AddAppendCommandH\x00\x12>\n\x0f\x65xecute_appends\x18\x07 \x01(\x0b\x32#.raft_service.ExecuteAppendsCommandH\x00\x42\t\n\x07\x63ommand\"E\n\nAppendArgs\x12\x10\n\x08leaderID\x18\x02 \x01(\t\x12%\n\x05\x65ntry\x18\x04 \x01(\x0b\x32\x16.raft_service.LogEntry\"7\n\x10RecoveryResponse\x12#\n\x03log\x18\x01 \x03(\x0b\x32\x16.raft_service.LogEntry\"\x14\n\x03Int\x12\r\n\x05value\x18\x01 \x01(\x05\"!\n\x0e\x41ppendResponse\x12\x0f\n\x07success\x18\x02 \x01(\x08\"\x15\n\x04\x42ool\x12\r\n\x05value\x18\x01 \x01(\x08\"\x07\n\x05\x45mpty2\xd3\x01\n\x0bRaftService\x12\x46\n\x0c\x61ppend_entry\x12\x18.raft_service.AppendArgs\x1a\x1c.raft_service.AppendResponse\x12\x39\n\x0e\x61re_you_leader\x12\x13.raft_service.Empty\x1a\x12.raft_service.Bool\x12\x41\n\x0crecover_logs\x12\x11.raft_service.Int\x1a\x1e.raft_service.RecoveryResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -47,14 +47,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LOGENTRY']._serialized_end=686
   _globals['_APPENDARGS']._serialized_start=688
   _globals['_APPENDARGS']._serialized_end=757
-  _globals['_ELECTIONCONTEST']._serialized_start=759
-  _globals['_ELECTIONCONTEST']._serialized_end=797
-  _globals['_APPENDRESPONSE']._serialized_start=799
-  _globals['_APPENDRESPONSE']._serialized_end=832
-  _globals['_BOOL']._serialized_start=834
-  _globals['_BOOL']._serialized_end=855
-  _globals['_EMPTY']._serialized_start=857
-  _globals['_EMPTY']._serialized_end=864
-  _globals['_RAFTSERVICE']._serialized_start=867
-  _globals['_RAFTSERVICE']._serialized_end=1091
+  _globals['_RECOVERYRESPONSE']._serialized_start=759
+  _globals['_RECOVERYRESPONSE']._serialized_end=814
+  _globals['_INT']._serialized_start=816
+  _globals['_INT']._serialized_end=836
+  _globals['_APPENDRESPONSE']._serialized_start=838
+  _globals['_APPENDRESPONSE']._serialized_end=871
+  _globals['_BOOL']._serialized_start=873
+  _globals['_BOOL']._serialized_end=894
+  _globals['_EMPTY']._serialized_start=896
+  _globals['_EMPTY']._serialized_end=903
+  _globals['_RAFTSERVICE']._serialized_start=906
+  _globals['_RAFTSERVICE']._serialized_end=1117
 # @@protoc_insertion_point(module_scope)

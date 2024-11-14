@@ -12,6 +12,7 @@ import grpc
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
+from grpc_start import commands as cs
 from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server  # noqa: E402
 
 # The server is required to have the following functionality:
@@ -29,9 +30,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
-        self.waiting_list = (
-            deque()
-        )  # needs to be synced - 'add', 'remove client id' action
+        self.waiting_list = deque()
         self.newClientId = 1  # needs to be synced - 'increment' action
         self.appends = (
             deque()
@@ -109,6 +108,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.newClientId += 1
         client_seq = 1  # sequence number of next expected request
 
+        for client in self.clients:
+            existing_ip = self.clients[client]["ip"]
+            existing_seq = self.clients[client]["seq"]
+
+            if existing_ip == client_ip:
+                # client is attempting to rejoin a server that already has a record for it
+                print("duplicate client_init")
+                return lock_pb2.Int(rc=existing_ip, seq=existing_seq)
+
         self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
         if DEBUG:
             print("client_init received: " + str(request.rc))
@@ -155,7 +163,18 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                     status=lock_pb2.Status.SUCCESS, seq=client_seq + 1
                 )
             else:
+                # if not context.is_active():
+
+                # else:
                 time.sleep(0.1)
+
+    def execute_appends(self):
+        # execute all stashed changes to files - this also removes all append entries
+        while self.appends:
+            file_path, bytes = self.appends.popleft()
+
+            with open(file_path, "ab") as file:
+                file.write(bytes)
 
     def lock_release(self, request, context) -> lock_pb2.Response:
         client_id = request.client_id
@@ -173,12 +192,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             self.clients[client_id]["seq"] += 1
             self.start_lock_timer()
 
-            # execute all stashed changes to files - this also removes all append entries
-            while self.appends:
-                file_path, bytes = self.appends.popleft()
-
-                with open(file_path, "ab") as file:
-                    file.write(bytes)
+            self.execute_appends()
 
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
@@ -261,8 +275,33 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             print()
         return lock_pb2.Int(rc=client_id, seq=0)
 
+    # ONLY EXECUTED BY LOCKSERVERS ATTACHED TO FOLLOWER NODES
+    # got a command from the leader, apply to internal state
+    def commit_command(self, command: cs.Command):
+        if isinstance(command, cs.AddClientCommand):
+            client_ip = command.client_ip
+            client_id = command.client_id
+
+            self.newClientId = client_id + 1  # this seems stupid
+            client_seq = 1
+
+            self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
+
+        elif isinstance(command, cs.IncrementClientSeqCommand):
+            self.clients[command.client_id]["seq"] += 1
+
+        elif isinstance(command, cs.ChangeLockHolderCommand):
+            self.lock_owner = command.client_id
+            self.waiting_list = deque()  # ensure follower does not at any point have a waiting list independent of leader
+
+        elif isinstance(command, cs.AddAppendCommand):
+            self.appends.append((command.filename, command.content))
+
+        elif isinstance(command, cs.ExecuteAppendsCommand):
+            self.execute_appends()
+
     def serve(self):
-        self.raft_server = raft_server.RaftServer(self.port, self.ip)
+        self.raft_server = raft_server.RaftServer(self.port, self.ip, self)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
         lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)

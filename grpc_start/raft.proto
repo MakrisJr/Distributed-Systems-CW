@@ -7,6 +7,7 @@ package raft_service;
 // add client to self.clients
 message AddClientCommand {
     int32 client_id = 1;
+    string client_ip = 2;
 }
 
 // increment the expected sequence no in self.clients[client_id]
@@ -17,9 +18,6 @@ message IncrementClientSeqCommand {
 message ChangeLockHolderCommand {
     int32 client_id = 1;
 }
-
-// increment ID assigned to new clients
-message IncrementNewClientIDCommand {}
 
 // add a file append operation to local queue of appends
 message AddAppendCommand {
@@ -36,9 +34,8 @@ message LogEntry {
         AddClientCommand add_client = 2;
         IncrementClientSeqCommand increment_client_seq = 3;
         ChangeLockHolderCommand change_lock_holder = 4;
-        IncrementNewClientIDCommand increment_new_client_id = 5;
-        AddAppendCommand add_append = 6;
-        ExecuteAppendsCommand execute_appends = 7;
+        AddAppendCommand add_append = 5;
+        ExecuteAppendsCommand execute_appends = 6;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }
@@ -57,14 +54,6 @@ message Int {
     int32 value = 1;
 }
 
-message ElectionContest{
-    int32 generatedNo = 1;
-}
-
-message AppendResponse {
-    bool success = 2; // true if follower  successfully executed
-}
-
 message Bool {
     bool value = 1;
 }
@@ -72,8 +61,7 @@ message Bool {
 message Empty {}
 
 service RaftService {
-    rpc append_entry(AppendArgs) returns (AppendResponse);
-    rpc request_vote(ElectionContest) returns (ElectionContest);
+    rpc append_entry(AppendArgs) returns (Bool);
     rpc are_you_leader(Empty) returns (Bool);
     rpc recover_logs(Int) returns (RecoveryResponse);
 }
