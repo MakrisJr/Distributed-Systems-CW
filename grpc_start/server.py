@@ -301,6 +301,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         elif isinstance(command, cs.ExecuteAppendsCommand):
             self.execute_appends()
 
+        elif isinstance(command, cs.RemoveClientCommand):
+            client_id = command.client_id
+            if client_id in self.clients:
+                # while self.lock_owner == client_id:
+                #     time.sleep(0.01)
+                del self.clients[client_id]
+
     def serve(self):
         self.raft_server = raft_server.RaftServer(self.ip, self.port, self)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

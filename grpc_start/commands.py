@@ -29,3 +29,8 @@ class AddAppendCommand(Command):
 @dataclass
 class ExecuteAppendsCommand(Command):
     pass
+
+@dataclass
+class RemoveClientCommand(Command):
+    def __init__(self, client_id: int):
+        self.client_id = client_id

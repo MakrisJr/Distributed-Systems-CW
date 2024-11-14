@@ -28,6 +28,10 @@ message AddAppendCommand {
 // execute all appends in queue
 message ExecuteAppendsCommand {}
 
+message RemoveClientCommand{
+    int32 client_id = 1;
+}
+
 message LogEntry {
     // only one command per log entry!
     oneof command {
@@ -36,6 +40,7 @@ message LogEntry {
         ChangeLockHolderCommand change_lock_holder = 4;
         AddAppendCommand add_append = 5;
         ExecuteAppendsCommand execute_appends = 6;
+        RemoveClientCommand remove_client = 7;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }
