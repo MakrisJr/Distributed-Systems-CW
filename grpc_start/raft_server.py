@@ -1,18 +1,18 @@
+import json
+import os
 import random
 import threading
 import time
 from enum import Enum
 
-import grpc
-import json
+# idiot workaround lmao
+from typing import TYPE_CHECKING
 
-import os
+import grpc
 
 from grpc_start import log_entries as log
 from grpc_start import raft_pb2, raft_pb2_grpc, server  # noqa: F401
 
-# idiot workaround lmao
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from grpc_start import server
 
@@ -160,6 +160,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def deserialise_log(self):
         """Reads from logfile into self.log"""
         try:
+
             with open(self.log_file_path, 'r') as f:
                 self.log = json.load(f)
         except FileNotFoundError:
@@ -191,8 +192,22 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def send_append_entry_rpcs(self, entry: log.LogEntry):
         if self.state == RaftServerState.LEADER:
             for raft_node in self.raft_servers:
-                # TODO: implement logic here
-                raise NotImplementedError
+                try:
+                    response = self.retry_rpc_call(
+                        self.stubs[raft_node].append_entry,
+                        raft_pb2.AppendArgs(
+                            leaderID=f"{self.server_ip}:{self.server_port}",
+                            entry=log.log_entry_object_to_grpc(entry),
+                        ),
+                    )
+
+                except grpc.RpcError as e:
+                    print(
+                        f"Raft server {self.server_port}: Error sending append_entry RPC to {raft_node}: {e}"
+                    )
+                    # remove node from raft_servers
+                    self.raft_servers.remove(raft_node)
+                    continue
 
             # execute command itself
             self.log.append(entry)
