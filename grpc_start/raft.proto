@@ -58,10 +58,14 @@ message Bool {
     bool value = 1;
 }
 
+message String {
+    string value = 1;
+}
+
 message Empty {}
 
 service RaftService {
     rpc append_entry(AppendArgs) returns (Bool);
-    rpc are_you_leader(Empty) returns (Bool);
+    rpc where_is_leader(Empty) returns (String);
     rpc recover_logs(Int) returns (RecoveryResponse);
 }

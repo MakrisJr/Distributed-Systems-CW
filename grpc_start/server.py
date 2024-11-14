@@ -312,7 +312,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.start()
         print("Server started, listening on ", self.port)
         time.sleep(5)
-        print(f"Raft server {self.port} found leader: {self.raft_server.find_leader()}")
+        thread_raft = threading.Thread(target=self.raft_server.find_leader)
+        thread_raft.start()
 
     def stop(self):
         self.lock_timer.cancel()
