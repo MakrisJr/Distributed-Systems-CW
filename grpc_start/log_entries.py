@@ -6,24 +6,36 @@ class LogEntry:
     def __init__(self, command: cs.Command):
         self.command = command
 
+    def toJson(self):
+        return {
+            "command": self.command.toJson(),
+        }
+
 
 def log_entry_grpc_to_object(entry: raft_pb2.LogEntry) -> LogEntry:
-    if not entry:
+    if not entry or not entry.HasField("command"):
         return None
+    # print(f"HAS FIELD ENTRY: {entry}")
     # mind you, clunky as all hell
-    if entry.hasField("add_client"):
-        new_command = cs.AddClientCommand(entry.add_client.client_id)
-    elif entry.hasField("increment_client_seq"):
+    # entry is add_client {
+    #   client_id: 1
+    #   client_ip: "ipv6:%5B::1%5D:59094"
+    # }
+    if entry.HasField("add_client"):
+        new_command = cs.AddClientCommand(
+            entry.add_client.client_id, entry.add_client.client_ip
+        )
+    elif entry.HasField("increment_client_seq"):
         new_command = cs.IncrementClientSeqCommand(entry.increment_client_seq.client_id)
-    elif entry.hasField("change_lock_holder"):
+    elif entry.HasField("change_lock_holder"):
         new_command = cs.ChangeLockHolderCommand(entry.change_lock_holder.client_id)
-    elif entry.hasField("add_append"):
+    elif entry.HasField("add_append"):
         new_command = cs.AddAppendCommand(
             entry.add_append.filename, entry.add_append.content
         )
-    elif entry.hasField("execute_appends"):
+    elif entry.HasField("execute_appends"):
         new_command = cs.ExecuteAppendsCommand()
-    elif entry.hasField("remove_client"):
+    elif entry.HasField("remove_client"):
         new_command = cs.RemoveClientCommand(entry.remove_client.client_id)
     else:
         raise Exception("Command not present in log entry GRPC message")
@@ -32,11 +44,6 @@ def log_entry_grpc_to_object(entry: raft_pb2.LogEntry) -> LogEntry:
 
 
 def log_entry_object_to_grpc(entry: LogEntry) -> raft_pb2.LogEntry:
-    print(id(cs.AddClientCommand))
-    print(id(entry.command))
-
-    # print(f"Converting {str(entry.command)}")
-    print(f"Instance of entry.command: {entry.command}")
     if isinstance(entry.command, cs.AddClientCommand):
         return raft_pb2.LogEntry(
             add_client=raft_pb2.AddClientCommand(
