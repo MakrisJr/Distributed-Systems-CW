@@ -13,6 +13,7 @@ root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
 from grpc_start import commands as cs
+from grpc_start import log_entries as log
 from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server  # noqa: E402
 
 # The server is required to have the following functionality:

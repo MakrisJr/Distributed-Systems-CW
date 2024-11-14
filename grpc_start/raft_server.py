@@ -4,9 +4,17 @@ import time
 from enum import Enum
 
 import grpc
+import json
+
+import os
 
 from grpc_start import log_entries as log
 from grpc_start import raft_pb2, raft_pb2_grpc, server  # noqa: F401
+
+# idiot workaround lmao
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from grpc_start import server
 
 RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 
@@ -23,9 +31,11 @@ MAX_LEADER_CHANGE_TIMEOUT = 0.3
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
 
+LOGFILE_PATH = "./log/log.json"
+
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
-    def __init__(self, ip, port, lock_server: server.LockServer, is_leader=False):
+    def __init__(self, ip, port, lock_server: "server.LockServer", is_leader=False):
         self.server_ip = ip
         self.server_port = port
 
@@ -38,15 +48,21 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
         self.establish_channels_stubs()
 
-        if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
-            self.leader_start()
+        if os.path.exists(LOGFILE_PATH): 
+            # assuming that if log file exists, that means this server died and came back
+            self.initiate_recovery()
         else:
-            self.follower_start()
+            if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
+                self.leader_start()
+            else:
+                self.follower_start()
 
     def leader_start(self):
         # called when first coming into power
         self.state = RaftServerState.LEADER
-        self.send_append_entry_rpcs(entry=None)  # TODO send heartbeats to all other servers so they know you're leader
+        self.send_append_entry_rpcs(
+            entry=None
+        )  # TODO send heartbeats to all other servers so they know you're leader
 
         if self.new_leader_timeout:
             self.new_leader_timeout.cancel()
@@ -137,6 +153,21 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         if self.state == RaftServerState.FOLLOWER:
             self.leader_start()
 
+    def serialise_log(self):
+        """Converts self.log to json file"""
+        with open(LOGFILE_PATH, 'w') as f:
+            json.dump(self.log, f)
+
+    def deserialise_log(self):
+        """Reads from logfile into self.log"""
+        try:
+            with open(LOGFILE_PATH, 'r') as f:
+                self.log = json.load(f)
+        except FileNotFoundError:
+            print("Log file not found.")
+        except json.JSONDecodeError:
+            print("Log file is not a valid JSON.")
+
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entry(self, request, context):
         # if we receive an append_entries message, we know not to become the new leader
@@ -148,6 +179,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         if request.entry is not None:
             log_entry = log.log_entry_grpc_to_object(request.entry)
             self.log.append(log_entry)
+            self.serialise_log()
 
             command = log_entry.command
             self.lock_server.commit_command(command)
@@ -165,15 +197,23 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             # execute command itself
             self.log.append(entry)
-
-            # TODO: serialise log to logfile
-
+            self.serialise_log()
             self.lock_server.commit_command(entry.command)
 
-    # follower sends rpc to leader upon revival, to see if any logs missing
+    # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
-        raise NotImplementedError
-    
+        self.state = RaftServerState.FOLLOWER
+        self.deserialise_log()
+        self.leader = self.find_leader()
+
+        # TODO: get missing logs from leader
+
+        for entry in self.log:
+            self.lock_server.commit_command(entry.command)
+
+        # now that this is an up-to-date follower, allow it to potentially become the leader
+        self.start_new_leader_timer()
+
     # leader helpfully returns missing logs to idiot follower who had the temerity to die
     def recover_logs(self, request, context):
         return super().recover_logs(request, context)
