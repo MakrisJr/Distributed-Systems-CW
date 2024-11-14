@@ -174,14 +174,17 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.state = RaftServerState.FOLLOWER
         self.start_new_leader_timer()
         self.leader = request.leaderID
+        # print("REQUEST: ", request.entry)
 
-        if request.entry is not None:
+        if len(str(request.entry)) > 0:
             log_entry = log.log_entry_grpc_to_object(request.entry)
             self.log.append(log_entry)
             self.serialise_log()
 
             command = log_entry.command
             self.lock_server.commit_command(command)
+        else:
+            print("heartbeat")
 
         return raft_pb2.Bool(value=True)
 
@@ -192,13 +195,23 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         if self.state == RaftServerState.LEADER:
             for raft_node in self.raft_servers:
                 try:
-                    response = self.retry_rpc_call(
-                        self.stubs[raft_node].append_entry,
-                        raft_pb2.AppendArgs(
-                            leaderID=f"{self.server_ip}:{self.server_port}",
-                            entry=log.log_entry_object_to_grpc(entry),
-                        ),
-                    )
+                    if entry:
+                        response = self.retry_rpc_call(
+                            self.stubs[raft_node].append_entry,
+                            raft_pb2.AppendArgs(
+                                leaderID=f"{self.server_ip}:{self.server_port}",
+                                entry=log.log_entry_object_to_grpc(entry),
+                            ),
+                        )
+                    else:
+                        print("Sending heartbeat")
+                        response = self.retry_rpc_call(
+                            self.stubs[raft_node].append_entry,
+                            raft_pb2.AppendArgs(
+                                leaderID=f"{self.server_ip}:{self.server_port}",
+                                entry=None,
+                            ),
+                        )
 
                 except grpc.RpcError as e:
                     print(

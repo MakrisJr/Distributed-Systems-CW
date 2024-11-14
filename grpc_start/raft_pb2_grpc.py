@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import raft_pb2 as raft__pb2
+from grpc_start import raft_pb2 as grpc__start_dot_raft__pb2
 
 GRPC_GENERATED_VERSION = '1.67.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in raft_pb2_grpc.py depends on'
+        + f' but the generated code in grpc_start/raft_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,18 +36,18 @@ class RaftServiceStub(object):
         """
         self.append_entry = channel.unary_unary(
                 '/raft_service.RaftService/append_entry',
-                request_serializer=raft__pb2.AppendArgs.SerializeToString,
-                response_deserializer=raft__pb2.AppendResponse.FromString,
+                request_serializer=grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
                 _registered_method=True)
         self.are_you_leader = channel.unary_unary(
                 '/raft_service.RaftService/are_you_leader',
-                request_serializer=raft__pb2.Empty.SerializeToString,
-                response_deserializer=raft__pb2.Bool.FromString,
+                request_serializer=grpc__start_dot_raft__pb2.Empty.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
                 _registered_method=True)
         self.recover_logs = channel.unary_unary(
                 '/raft_service.RaftService/recover_logs',
-                request_serializer=raft__pb2.Int.SerializeToString,
-                response_deserializer=raft__pb2.RecoveryResponse.FromString,
+                request_serializer=grpc__start_dot_raft__pb2.Int.SerializeToString,
+                response_deserializer=grpc__start_dot_raft__pb2.RecoveryResponse.FromString,
                 _registered_method=True)
 
 
@@ -77,18 +77,18 @@ def add_RaftServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'append_entry': grpc.unary_unary_rpc_method_handler(
                     servicer.append_entry,
-                    request_deserializer=raft__pb2.AppendArgs.FromString,
-                    response_serializer=raft__pb2.AppendResponse.SerializeToString,
+                    request_deserializer=grpc__start_dot_raft__pb2.AppendArgs.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
             ),
             'are_you_leader': grpc.unary_unary_rpc_method_handler(
                     servicer.are_you_leader,
-                    request_deserializer=raft__pb2.Empty.FromString,
-                    response_serializer=raft__pb2.Bool.SerializeToString,
+                    request_deserializer=grpc__start_dot_raft__pb2.Empty.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
             ),
             'recover_logs': grpc.unary_unary_rpc_method_handler(
                     servicer.recover_logs,
-                    request_deserializer=raft__pb2.Int.FromString,
-                    response_serializer=raft__pb2.RecoveryResponse.SerializeToString,
+                    request_deserializer=grpc__start_dot_raft__pb2.Int.FromString,
+                    response_serializer=grpc__start_dot_raft__pb2.RecoveryResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -116,8 +116,8 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/append_entry',
-            raft__pb2.AppendArgs.SerializeToString,
-            raft__pb2.AppendResponse.FromString,
+            grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
+            grpc__start_dot_raft__pb2.Bool.FromString,
             options,
             channel_credentials,
             insecure,
@@ -143,8 +143,8 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/are_you_leader',
-            raft__pb2.Empty.SerializeToString,
-            raft__pb2.Bool.FromString,
+            grpc__start_dot_raft__pb2.Empty.SerializeToString,
+            grpc__start_dot_raft__pb2.Bool.FromString,
             options,
             channel_credentials,
             insecure,
@@ -170,8 +170,8 @@ class RaftService(object):
             request,
             target,
             '/raft_service.RaftService/recover_logs',
-            raft__pb2.Int.SerializeToString,
-            raft__pb2.RecoveryResponse.FromString,
+            grpc__start_dot_raft__pb2.Int.SerializeToString,
+            grpc__start_dot_raft__pb2.RecoveryResponse.FromString,
             options,
             channel_credentials,
             insecure,
