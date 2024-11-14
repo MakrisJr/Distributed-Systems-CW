@@ -1,5 +1,4 @@
-import commands as cs
-
+from grpc_start import commands as cs
 from grpc_start import raft_pb2
 
 
@@ -33,6 +32,11 @@ def log_entry_grpc_to_object(entry: raft_pb2.LogEntry) -> LogEntry:
 
 
 def log_entry_object_to_grpc(entry: LogEntry) -> raft_pb2.LogEntry:
+    print(id(cs.AddClientCommand))
+    print(id(entry.command))
+
+    # print(f"Converting {str(entry.command)}")
+    print(f"Instance of entry.command: {entry.command}")
     if isinstance(entry.command, cs.AddClientCommand):
         return raft_pb2.LogEntry(
             add_client=raft_pb2.AddClientCommand(

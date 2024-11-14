@@ -196,6 +196,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             for raft_node in self.raft_servers:
                 try:
                     if entry:
+                        print(f"Sending append_entry {entry.command} to {raft_node}")
+                        print(f"Type of command: {type(entry.command)}")
                         self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
@@ -258,6 +260,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             log_grpcs.append(log.log_entry_object_to_grpc(entry))
 
         return raft_pb2.RecoveryResponse(log=log_grpcs)
-    
+
     def is_leader(self):
         return self.state == RaftServerState.LEADER
