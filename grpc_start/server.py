@@ -13,7 +13,6 @@ root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
 from grpc_start import commands as cs
-from grpc_start import log_entries as log
 from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server  # noqa: E402
 
 # The server is required to have the following functionality:
@@ -309,7 +308,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 del self.clients[client_id]
 
     def serve(self):
-        self.raft_server = raft_server.RaftServer(self.ip, self.port, self)
+        self.raft_server = raft_server.RaftServer(
+            self.ip, self.port, f"./log/{self.port}.log", self
+        )
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
         lock_pb2_grpc.add_LockServiceServicer_to_server(self, self.server)

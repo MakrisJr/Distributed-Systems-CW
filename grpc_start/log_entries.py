@@ -9,6 +9,8 @@ class LogEntry:
 
 
 def log_entry_grpc_to_object(entry: raft_pb2.LogEntry) -> LogEntry:
+    if not entry:
+        return None
     # mind you, clunky as all hell
     if entry.hasField("add_client"):
         new_command = cs.AddClientCommand(entry.add_client.client_id)
