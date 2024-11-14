@@ -31,15 +31,14 @@ MAX_LEADER_CHANGE_TIMEOUT = 0.3
 RETRY_LIMIT = 3
 RETRY_DELAY = 2
 
-LOGFILE_PATH = "./log/log.json"
-
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
-    def __init__(self, ip, port, lock_server: "server.LockServer", is_leader=False):
+    def __init__(self, ip, port, log_file_path, lock_server: "server.LockServer", is_leader=False):
         self.server_ip = ip
         self.server_port = port
 
         self.log = []  # entries all of type LogEntry
+        self.log_file_path = log_file_path
 
         self.lock_server = lock_server  # reference to the parent LockServer
 
@@ -48,7 +47,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
         self.establish_channels_stubs()
 
-        if os.path.exists(LOGFILE_PATH):
+        if os.path.exists(self.log_file_path): 
             # assuming that if log file exists, that means this server died and came back
             self.initiate_recovery()
         else:
@@ -155,13 +154,14 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def serialise_log(self):
         """Converts self.log to json file"""
-        with open(LOGFILE_PATH, "w") as f:
+        with open(self.log_file_path, 'w') as f:
             json.dump(self.log, f)
 
     def deserialise_log(self):
         """Reads from logfile into self.log"""
         try:
-            with open(LOGFILE_PATH, "r") as f:
+
+            with open(self.log_file_path, 'r') as f:
                 self.log = json.load(f)
         except FileNotFoundError:
             print("Log file not found.")
