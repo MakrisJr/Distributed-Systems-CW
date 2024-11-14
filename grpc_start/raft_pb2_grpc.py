@@ -39,10 +39,10 @@ class RaftServiceStub(object):
                 request_serializer=grpc__start_dot_raft__pb2.AppendArgs.SerializeToString,
                 response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
                 _registered_method=True)
-        self.are_you_leader = channel.unary_unary(
-                '/raft_service.RaftService/are_you_leader',
+        self.where_is_leader = channel.unary_unary(
+                '/raft_service.RaftService/where_is_leader',
                 request_serializer=grpc__start_dot_raft__pb2.Empty.SerializeToString,
-                response_deserializer=grpc__start_dot_raft__pb2.Bool.FromString,
+                response_deserializer=grpc__start_dot_raft__pb2.String.FromString,
                 _registered_method=True)
         self.recover_logs = channel.unary_unary(
                 '/raft_service.RaftService/recover_logs',
@@ -60,7 +60,7 @@ class RaftServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def are_you_leader(self, request, context):
+    def where_is_leader(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -80,10 +80,10 @@ def add_RaftServiceServicer_to_server(servicer, server):
                     request_deserializer=grpc__start_dot_raft__pb2.AppendArgs.FromString,
                     response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
             ),
-            'are_you_leader': grpc.unary_unary_rpc_method_handler(
-                    servicer.are_you_leader,
+            'where_is_leader': grpc.unary_unary_rpc_method_handler(
+                    servicer.where_is_leader,
                     request_deserializer=grpc__start_dot_raft__pb2.Empty.FromString,
-                    response_serializer=grpc__start_dot_raft__pb2.Bool.SerializeToString,
+                    response_serializer=grpc__start_dot_raft__pb2.String.SerializeToString,
             ),
             'recover_logs': grpc.unary_unary_rpc_method_handler(
                     servicer.recover_logs,
@@ -129,7 +129,7 @@ class RaftService(object):
             _registered_method=True)
 
     @staticmethod
-    def are_you_leader(request,
+    def where_is_leader(request,
             target,
             options=(),
             channel_credentials=None,
@@ -142,9 +142,9 @@ class RaftService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/raft_service.RaftService/are_you_leader',
+            '/raft_service.RaftService/where_is_leader',
             grpc__start_dot_raft__pb2.Empty.SerializeToString,
-            grpc__start_dot_raft__pb2.Bool.FromString,
+            grpc__start_dot_raft__pb2.String.FromString,
             options,
             channel_credentials,
             insecure,

@@ -47,10 +47,15 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
         self.establish_channels_stubs()
 
+        self.leader = None
+
         if os.path.exists(self.log_file_path):
             # assuming that if log file exists, that means this server died and came back
             self.initiate_recovery()
         else:
+            # create path and file if they dont exist
+            os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+            open(self.log_file_path, "w").close()
             if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
                 self.leader_start()
             else:
@@ -59,6 +64,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def leader_start(self):
         # called when first coming into power
         self.state = RaftServerState.LEADER
+        self.leader = f"{self.server_ip}:{self.server_port}"
         self.send_append_entry_rpcs(
             entry=None
         )  # TODO send heartbeats to all other servers so they know you're leader
@@ -76,15 +82,13 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.channels = {}
         self.stubs = {}
 
-        print(f"SERVER LIST: {self.raft_servers}")
         for raft_node in self.raft_servers:
             try:
-                print(f"Raft server {self.server_port}: Connecting to {raft_node}")
                 channel = grpc.insecure_channel(raft_node)
                 stub = raft_pb2_grpc.RaftServiceStub(channel)
                 self.channels[raft_node] = channel
                 self.stubs[raft_node] = stub
-
+                print(f"{self.server_port}: Connected to {raft_node}")
             except grpc.RpcError as e:
                 print(
                     f"Raft server {self.server_port}: Error connecting to {raft_node}: {e}"
@@ -109,31 +113,24 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         return None
 
     def find_leader(self):
-        for raft_node in self.raft_servers:
-            try:
-                print(
-                    f"Raft server {self.server_port}: Checking if {raft_node} is leader."
-                )
-                response = self.retry_rpc_call(
-                    self.stubs[raft_node].are_you_leader, raft_pb2.Empty()
-                )
-                if response == raft_pb2.Bool(value=True):
-                    print(f"Raft server {self.server_port}: Found leader: {raft_node}")
-                    self.leader = raft_node
-                    return response
-            except grpc.RpcError as e:
-                print(f"Raft server {self.server_port}: Error finding leader: {e}")
-                continue
-        self.leader = None
+        while True:
+            print(f"Raft server {self.server_port}: Finding leader.")
+            for server in self.raft_servers:
+                try:
+                    response = self.stubs[server].where_is_leader(raft_pb2.Empty())
+                    if len(response.value) > 0:
+                        print(
+                            f"Raft server {self.server_port}: Found leader: {response.value}"
+                        )
+                        return response.value
+                except grpc.RpcError:
+                    print(
+                        f"Raft server {self.server_port}: failed to contact node {server}"
+                    )
+                    continue
 
-        return None
-
-    def are_you_leader(self, request, context):
-        print(f"Raft server {self.server_port}: are_you_leader called.")
-        if self.state == RaftServerState.LEADER:
-            return raft_pb2.Bool(value=True)
-        else:
-            return raft_pb2.Bool(value=False)
+    def where_is_leader(self, request, context):
+        return raft_pb2.String(value=self.leader)
 
     def start_new_leader_timer(self):
         """Start or restart the 'new leader' timer for this Raft node."""
@@ -183,8 +180,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             command = log_entry.command
             self.lock_server.commit_command(command)
-        else:
-            print("heartbeat")
+        # else:
+        #     print("heartbeat")
 
         return raft_pb2.Bool(value=True)
 
@@ -205,8 +202,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                             ),
                         )
                     else:
-                        print("Sending heartbeat")
-                        self.retry_rpc_call(
+                        # print("Sending heartbeat")
+                        response = self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
                                 leaderID=f"{self.server_ip}:{self.server_port}",
@@ -223,9 +220,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                     continue
 
             # execute command itself
-            self.log.append(entry)
-            self.serialise_log()
-            self.lock_server.commit_command(entry.command)
+            if entry:
+                self.log.append(entry)
+                self.serialise_log()
+                self.lock_server.commit_command(entry.command)
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):

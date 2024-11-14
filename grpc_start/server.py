@@ -385,7 +385,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.start()
         print("Server started, listening on ", self.port)
         time.sleep(5)
-        print(f"Raft server {self.port} found leader: {self.raft_server.find_leader()}")
+        thread_raft = threading.Thread(target=self.raft_server.find_leader)
+        thread_raft.start()
 
     def stop(self):
         self.lock_timer.cancel()
@@ -414,6 +415,10 @@ def reset_files(n=100):
     for i in range(n):
         with open("./files/file_" + str(i), "w") as f:
             f.write("")
+
+    # delete files in ./log/*
+    for file in os.listdir("./log"):
+        os.remove(os.path.join("./log", file))
 
 
 if __name__ == "__main__":
