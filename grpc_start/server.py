@@ -110,7 +110,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq
             )
 
+
     def client_init(self, request, context):
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Int(leader=self.raft_server.leader)
+
         client_ip = context.peer()
         client_id = self.newClientId
         self.newClientId += 1
@@ -136,6 +140,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Response(leader=self.raft_server.leader)
+
         client_id = request.client_id
         request_seq = request.seq
 
@@ -207,6 +214,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         )
 
     def lock_release(self, request, context) -> lock_pb2.Response:
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Response(leader=self.raft_server.leader)
+
         client_id = request.client_id
         request_seq = request.seq
 
@@ -238,6 +248,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             )
 
     def file_append(self, request, context) -> lock_pb2.Response:
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Response(leader=self.raft_server.leader)
+
         client_id = request.client_id
         request_seq = request.seq
 
@@ -291,6 +304,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def keep_alive(self, request, context) -> lock_pb2.Response:
         """Handle keep-alive messages from the client."""
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Response(leader=self.raft_server.leader)
+
         client_id = request.client_id
         if client_id == self.lock_owner:
             print(f"Keep-alive received from client {client_id}. Resetting lock timer.")
@@ -305,6 +321,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             )
 
     def client_close(self, request, context):
+        if not (self.raft_server.is_leader()):
+            return lock_pb2.Int(leader=self.raft_server.leader)
+
         # get process id and remove from set
         client_id = request.rc
         if client_id in self.clients:

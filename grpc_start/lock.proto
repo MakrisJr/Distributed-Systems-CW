@@ -22,6 +22,7 @@ enum Status {
 message Response {
     Status status = 1;
     int32 seq = 2;
+    string leader = 3;
 }
 
 // file append arguments, add any fields you want
@@ -37,7 +38,7 @@ message Int {
     Status status = 1;
     int32 rc = 2;
     int32 seq = 3;
-
+    string leader = 4;
 }
 
 message Empty {
