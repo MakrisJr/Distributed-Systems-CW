@@ -229,10 +229,16 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
         self.state = RaftServerState.FOLLOWER
-        self.deserialise_log()
+        self.deserialise_log()  # get cached log entries
         self.leader = self.find_leader()
 
-        # TODO: get missing logs from leader
+        # get missing log entries (if any) from leader
+        missing_log_grpcs = self.retry_rpc_call(
+            self.stubs[self.leader].recover_logs, raft_pb2.Int(value=len(self.log))
+        )
+        if missing_log_grpcs:
+            for log_grpc in missing_log_grpcs:
+                self.log.append(log.log_entry_grpc_to_object(log_grpc))
 
         for entry in self.log:
             self.lock_server.commit_command(entry.command)
@@ -242,4 +248,12 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # leader helpfully returns missing logs to idiot follower who had the temerity to die
     def recover_logs(self, request, context):
-        return super().recover_logs(request, context)
+        follower_log_length = request.value
+
+        remaining_log = self.log[follower_log_length:]
+        log_grpcs = []
+
+        for entry in remaining_log:
+            log_grpcs.append(log.log_entry_object_to_grpc(entry))
+
+        return raft_pb2.RecoveryResponse(log=log_grpcs)
