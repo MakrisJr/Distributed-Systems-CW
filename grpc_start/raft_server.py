@@ -122,6 +122,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         print(
                             f"Raft server {self.server_port}: Found leader: {response.value}"
                         )
+                        self.leader = response.value
                         return response.value
                 except grpc.RpcError:
                     print(
@@ -189,11 +190,14 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
+        print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
                 try:
                     if entry:
+                        print(f"Sending append_entry {entry.command} to {raft_node}")
+                        print(f"Type of command: {type(entry.command)}")
                         self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
@@ -256,6 +260,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             log_grpcs.append(log.log_entry_object_to_grpc(entry))
 
         return raft_pb2.RecoveryResponse(log=log_grpcs)
-    
+
     def is_leader(self):
         return self.state == RaftServerState.LEADER

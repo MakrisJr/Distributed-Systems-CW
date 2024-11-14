@@ -35,19 +35,19 @@ message RemoveClientCommand{
 message LogEntry {
     // only one command per log entry!
     oneof command {
-        AddClientCommand add_client = 2;
-        IncrementClientSeqCommand increment_client_seq = 3;
-        ChangeLockHolderCommand change_lock_holder = 4;
-        AddAppendCommand add_append = 5;
-        ExecuteAppendsCommand execute_appends = 6;
-        RemoveClientCommand remove_client = 7;
+        AddClientCommand add_client = 1;
+        IncrementClientSeqCommand increment_client_seq = 2;
+        ChangeLockHolderCommand change_lock_holder = 3;
+        AddAppendCommand add_append = 4;
+        ExecuteAppendsCommand execute_appends = 5;
+        RemoveClientCommand remove_client = 6;
     }
     // check which one exists via (log entry).hasField("add_client"), for example
 }
 
 message AppendArgs{
-    string leaderID = 2; // so follower can redirect clients
-    LogEntry entry = 4; // log entries for followers to append
+    string leaderID = 1; // so follower can redirect clients
+    LogEntry entry = 2; // log entries for followers to append
     // no entry == heartbeat
 }
 

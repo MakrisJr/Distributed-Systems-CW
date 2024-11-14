@@ -332,6 +332,11 @@ def test_raft():
     thread2.start()
     thread3.start()
 
+    time.sleep(7)
+
+    client1 = Client()
+    client1.RPC_client_init()
+
     time.sleep(15)
 
     server1.stop()
