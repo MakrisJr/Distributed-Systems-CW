@@ -342,6 +342,10 @@ def reset_files(n=100):
         with open("./files/file_" + str(i), "w") as f:
             f.write("")
 
+    # delete files in ./log/*
+    for file in os.listdir("./log"):
+        os.remove(os.path.join("./log", file))
+
 
 if __name__ == "__main__":
     create_files()  # presumably the server object should do this, rather than it being randomly outside??

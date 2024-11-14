@@ -51,6 +51,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # assuming that if log file exists, that means this server died and came back
             self.initiate_recovery()
         else:
+            # create path and file if they dont exist
+            os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+            open(self.log_file_path, "w").close()
             if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
                 self.leader_start()
             else:
@@ -222,9 +225,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                     continue
 
             # execute command itself
-            self.log.append(entry)
-            self.serialise_log()
-            self.lock_server.commit_command(entry.command)
+            if entry:
+                self.log.append(entry)
+                self.serialise_log()
+                self.lock_server.commit_command(entry.command)
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
