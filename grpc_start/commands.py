@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+import base64
 
 @dataclass
 class Command:
@@ -51,7 +51,7 @@ class AddAppendCommand(Command):
         return {
             "type": "AddAppendCommand",
             "filename": self.filename,
-            "content": self.content,
+            "content": base64.b64encode(self.content).decode('utf-8')
         }
 
 

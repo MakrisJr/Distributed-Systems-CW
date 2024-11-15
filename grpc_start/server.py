@@ -58,6 +58,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_timer:
             self.lock_timer.cancel()
         self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock)
+        self.lock_timer.daemon = True
         self.lock_timer.start()
 
     def force_release_lock(self):
@@ -383,8 +384,6 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.start()
         print("Server started, listening on ", self.port)
         time.sleep(5)
-        # thread_raft = threading.Thread(target=self.raft_server.find_leader)
-        # thread_raft.start()
 
     def stop(self):
         self.lock_timer.cancel()

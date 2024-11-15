@@ -1,3 +1,5 @@
+import base64
+
 from grpc_start import commands as cs
 from grpc_start import raft_pb2
 
@@ -30,7 +32,8 @@ def log_entry_json_to_object(entry: dict) -> LogEntry:
             )
         case "AddAppendCommand":
             new_command = cs.AddAppendCommand(
-                filename=command_json["filename"], content=command_json["content"]
+                filename=command_json["filename"],
+                content=base64.b64decode(command_json["content"]),
             )
         case "ExecuteAppendsCommand":
             new_command = cs.ExecuteAppendsCommand()

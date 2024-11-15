@@ -1,1 +1,2 @@
+
 [{"command": {"type": "AddClientCommand", "client_id": 1, "client_ip": "ipv6:%5B::1%5D:54042"}}, {"command": {"type": "IncrementClientSeqCommand", "client_id": 1}}, {"command": {"type": "ChangeLockHolderCommand", "client_id": 1}}, {"command": {"type": "IncrementClientSeqCommand", "client_id": 1}}, {"command": {"type": "AddAppendCommand", "filename": "./files/file_0", "content": 

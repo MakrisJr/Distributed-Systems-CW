@@ -73,6 +73,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             self.new_leader_timeout.cancel()
 
         heartbeat_thread = threading.Thread(target=self.send_heartbeats)
+        heartbeat_thread.daemon = True
         heartbeat_thread.start()
 
     def send_heartbeats(self):
@@ -157,7 +158,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             random.uniform(MIN_LEADER_CHANGE_TIMEOUT, MAX_LEADER_CHANGE_TIMEOUT),
             self.become_new_leader,
         )
-
+        self.new_leader_timeout.daemon = True
         self.new_leader_timeout.start()
 
     def become_new_leader(self):
