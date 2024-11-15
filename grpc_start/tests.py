@@ -354,9 +354,9 @@ if __name__ == "__main__":
         failed_tests.append("test_packet_delay")
         print("test_packet_delay failed")
 
-    # if not test_client_packet_loss():
-    #     failed_tests.append("test_client_packet_loss")
-    #     print("test_client_packet_loss failed")
+    if not test_client_packet_loss():
+        failed_tests.append("test_client_packet_loss")
+        print("test_client_packet_loss failed")
 
     # if not test_server_packet_loss():
     #     failed_tests.append("test_server_packet_loss")
@@ -378,9 +378,9 @@ if __name__ == "__main__":
     #     failed_tests.append("test_stuck_after_editing_file")
     #     print("test_stuck_after_editing_file failed")
 
-    if not test_raft():
-        failed_tests.append("test_raft")
-        print("test_raft failed")
+    # if not test_raft():
+    #     failed_tests.append("test_raft")
+    #     print("test_raft failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")

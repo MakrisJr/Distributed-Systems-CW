@@ -13,7 +13,7 @@ root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
 from grpc_start import commands as cs  # noqa: E402
-from grpc_start import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
+from grpc_start import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
     lock_pb2,
     lock_pb2_grpc,
     raft_pb2_grpc,
@@ -63,6 +63,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_timer:
             self.lock_timer.cancel()
         self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock)
+        self.lock_timer.daemon = True
         self.lock_timer.start()
 
     def force_release_lock(self):
@@ -128,7 +129,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             if existing_ip == client_ip:
                 # client is attempting to rejoin a server that already has a record for it
                 print("duplicate client_init")
-                return lock_pb2.Int(rc=existing_ip, seq=existing_seq)
+                return lock_pb2.Int(rc=client, seq=existing_seq)
 
         self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
         if DEBUG:
@@ -387,8 +388,6 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.start()
         print("Server started, listening on ", self.port)
         time.sleep(5)
-        thread_raft = threading.Thread(target=self.raft_server.find_leader)
-        thread_raft.start()
 
     def stop(self):
         self.lock_timer.cancel()
