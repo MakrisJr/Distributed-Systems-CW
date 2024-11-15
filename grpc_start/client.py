@@ -93,7 +93,7 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                self.RPC_where_is_server()
+                # self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -102,6 +102,7 @@ class Client:
         return None
 
     def RPC_lock_acquire(self):
+        print("CALLED RPC_LOCK_ACQUIRE")
         response = self.retry_rpc_call(
             self.stub.lock_acquire,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
@@ -138,6 +139,7 @@ class Client:
     def RPC_append_file(
         self, file_number, text, lost_before_server=False, lost_after_server=False
     ):
+        print("CALLED RPC_APPEND_FILE")
         if lost_before_server:  # simulate packet loss
             if DEBUG:
                 print(f"Client {self.client_id}: Simulating packet loss.")
@@ -194,6 +196,7 @@ class Client:
             return False
 
     def RPC_lock_release(self):
+        print("CALLED RPC_LOCK_RELEASE")
         response = self.retry_rpc_call(
             self.stub.lock_release,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
@@ -229,6 +232,7 @@ class Client:
             return False
 
     def RPC_client_close(self):
+        print("CALLED RPC_CLIENT_CLOSE")
         response = self.retry_rpc_call(
             self.stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )

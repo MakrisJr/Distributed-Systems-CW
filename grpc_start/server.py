@@ -13,11 +13,7 @@ root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
 from grpc_start import commands as cs  # noqa: E402
-from grpc_start import (  # noqa: E402
-    lock_pb2_grpc,  # noqa: E402
-    raft_pb2_grpc,
-    raft_server,
-)
+from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server
 from grpc_start import log_entries as log  # noqa: E402
 
 # The server is required to have the following functionality:
@@ -130,14 +126,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 print("duplicate client_init")
                 return lock_pb2.Int(rc=client, seq=existing_seq)
 
+        self.raft_server.send_append_entry_rpcs(
+            log.LogEntry(cs.AddClientCommand(client_id, client_ip))
+        )
         self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
         if DEBUG:
             print("client_init received: " + str(request.rc))
             print("connected clients: " + str(self.clients))
-
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.AddClientCommand(client_id, client_ip))
-        )
         return lock_pb2.Int(rc=client_id, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
@@ -157,16 +152,18 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         if self.lock_owner is None:
             self.waiting_list.append(request.client_id)
+
+            self.raft_server.send_append_entry_rpcs(
+                log.LogEntry(cs.ChangeLockHolderCommand(client_id))
+            )
             self.lock_owner = client_id
+
             self.start_lock_timer()
-            self.clients[client_id]["seq"] += 1
 
             self.raft_server.send_append_entry_rpcs(
                 log.LogEntry(cs.IncrementClientSeqCommand(client_id))
             )
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.ChangeLockHolderCommand(client_id))
-            )
+            self.clients[client_id]["seq"] += 1
 
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
@@ -174,6 +171,10 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         elif self.lock_owner == request.client_id:
             print(f"Client {client_id} already has the lock.")
             self.start_lock_timer()
+
+            self.raft_server.send_append_entry_rpcs(
+                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
+            )
             self.clients[client_id]["seq"] += 1
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
@@ -183,16 +184,14 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         while True:
             if self.waiting_list[0] == request.client_id:
                 # essentially, head of waiting list is always current owner
-                # could, in theory, remove self.lock_owner entirely but this might get confusing real fast
-                self.clients[client_id]["seq"] += 1
-                print(f"LOCK OWNER: {self.lock_owner}")
-
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(cs.IncrementClientSeqCommand(client_id))
                 )
-                self.raft_server.send_append_entry_rpcs(
-                    log.LogEntry(cs.ChangeLockHolderCommand(client_id))
-                )
+                self.clients[client_id]["seq"] += 1
+                print(f"LOCK OWNER: {self.lock_owner}")
+                # not sending rpcs to change lock holder here, as we're assuming this was already done
+                # in the lock_release that granted this client the lock
+
                 return lock_pb2.Response(
                     status=lock_pb2.Status.SUCCESS, seq=client_seq + 1
                 )
@@ -204,15 +203,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def execute_appends(self):
         # execute all stashed changes to files - this also removes all append entries
+        self.raft_server.send_append_entry_rpcs(
+            log.LogEntry(cs.ExecuteAppendsCommand())
+        )
+
         while self.appends:
             file_path, bytes = self.appends.popleft()
 
             with open(file_path, "ab") as file:
                 file.write(bytes)
-
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.ExecuteAppendsCommand())
-        )
 
     def lock_release(self, request, context) -> lock_pb2.Response:
         if not (self.raft_server.is_leader()):
@@ -230,10 +229,10 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_owner == request.client_id:
             self.grant_lock_to_next_client()
             # resets timer, as this is a call from the current lock owner, proving that client is alive
-            self.clients[client_id]["seq"] += 1
             self.raft_server.send_append_entry_rpcs(
                 log.LogEntry(cs.IncrementClientSeqCommand(client_id))
             )
+            self.clients[client_id]["seq"] += 1
 
             self.start_lock_timer()
 
@@ -242,7 +241,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
         else:
+            self.raft_server.send_append_entry_rpcs(
+                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
+            )
             self.clients[client_id]["seq"] += 1
+
             # good idea to have this anyhow, as client could call release before ever calling acquire
             return lock_pb2.Response(
                 status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]
@@ -277,13 +280,12 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
             if os.path.isfile(file_path):
                 # add file append operation to appends queue
-                self.appends.append((file_path, request.content))
-
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(
                         cs.AddAppendCommand(filename=file_path, content=request.content)
                     )
                 )
+                self.appends.append((file_path, request.content))
 
                 return lock_pb2.Response(
                     status=lock_pb2.Status.SUCCESS,
