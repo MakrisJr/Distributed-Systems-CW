@@ -13,13 +13,16 @@ FILE_PATH = "files/"
 
 
 def test_packet_delay():
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
 
+    reset_files()
     server = LockServer()
     server.serve()
-    reset_files()
+
     print("Server started")
+
+    time.sleep(1)
     # test packet delay
     client1.RPC_client_init()
     client2.RPC_client_init()
@@ -40,7 +43,7 @@ def test_packet_delay():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if not message == "":
@@ -51,13 +54,13 @@ def test_packet_delay():
 
 def test_client_packet_loss():
     # since we are using TCP, the only way to simulate packet drop is to delay the packet until the client times out.
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
 
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
 
     print("Server started")
     # test packet delay
@@ -81,22 +84,23 @@ def test_client_packet_loss():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BA":
         return True
+    print(message)
     return False
     # c2 gets the lock, appends 'B', c1 gets lock, writes 'A'
 
 
 def test_server_packet_loss():
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -120,22 +124,23 @@ def test_server_packet_loss():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "AB":
         return True
+    print(message)
     return False
 
 
 def test_duplicated_packets():
     # duplicated lock_release shall not release other clients' locks
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -175,22 +180,23 @@ def test_duplicated_packets():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "ABBA":
         return True
+    print(message)
     return False
 
 
 def test_combined_network_failures():
     # test combined network failures
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -217,7 +223,7 @@ def test_combined_network_failures():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "1AB":
@@ -229,12 +235,12 @@ def test_combined_network_failures():
 
 
 def test_stuck_before_editing_file():
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -263,7 +269,7 @@ def test_stuck_before_editing_file():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BBAA":
@@ -273,12 +279,12 @@ def test_stuck_before_editing_file():
 
 
 def test_stuck_after_editing_file():
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -309,7 +315,7 @@ def test_stuck_after_editing_file():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BBAA":
@@ -349,37 +355,37 @@ def test_raft():
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
-    # if not test_packet_delay():
-    #     failed_tests.append("test_packet_delay")
-    #     print("test_packet_delay failed")
+    if not test_packet_delay():
+        failed_tests.append("test_packet_delay")
+        print("test_packet_delay failed")
 
-    # if not test_client_packet_loss():
-    #     failed_tests.append("test_client_packet_loss")
-    #     print("test_client_packet_loss failed")
+    if not test_client_packet_loss():
+        failed_tests.append("test_client_packet_loss")
+        print("test_client_packet_loss failed")
 
-    # if not test_server_packet_loss():
-    #     failed_tests.append("test_server_packet_loss")
-    #     print("test_server_packet_loss failed")
+    if not test_server_packet_loss():
+        failed_tests.append("test_server_packet_loss")
+        print("test_server_packet_loss failed")
 
-    # if not test_duplicated_packets():
-    #     failed_tests.append("test_duplicated_packets")
-    #     print("test_duplicated_packets failed")
+    if not test_duplicated_packets():
+        failed_tests.append("test_duplicated_packets")
+        print("test_duplicated_packets failed")
 
-    # if not test_combined_network_failures():
-    #     failed_tests.append("test_combined_network_failures")
-    #     print("test_combined_network_failures failed")
+    if not test_combined_network_failures():
+        failed_tests.append("test_combined_network_failures")
+        print("test_combined_network_failures failed")
 
-    # if not test_stuck_before_editing_file():
-    #     failed_tests.append("test_stuck_before_editing_file")
-    #     print("test_stuck_before_editing_file failed")
+    if not test_stuck_before_editing_file():
+        failed_tests.append("test_stuck_before_editing_file")
+        print("test_stuck_before_editing_file failed")
 
-    # if not test_stuck_after_editing_file():
-    #     failed_tests.append("test_stuck_after_editing_file")
-    #     print("test_stuck_after_editing_file failed")
+    if not test_stuck_after_editing_file():
+        failed_tests.append("test_stuck_after_editing_file")
+        print("test_stuck_after_editing_file failed")
 
-    if not test_raft():
-        failed_tests.append("test_raft")
-        print("test_raft failed")
+    # if not test_raft():
+    #     failed_tests.append("test_raft")
+    #     print("test_raft failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")

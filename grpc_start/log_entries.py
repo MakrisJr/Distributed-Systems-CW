@@ -1,3 +1,5 @@
+import base64
+
 from grpc_start import commands as cs
 from grpc_start import raft_pb2
 
@@ -10,6 +12,35 @@ class LogEntry:
         return {
             "command": self.command.toJson(),
         }
+
+
+def log_entry_json_to_object(entry: dict) -> LogEntry:
+    command_json = entry["command"]
+
+    match command_json["type"]:
+        case "AddClientCommand":
+            new_command = cs.AddClientCommand(
+                client_id=command_json["client_id"], client_ip=command_json["client_ip"]
+            )
+        case "IncrementClientSeqCommand":
+            new_command = cs.IncrementClientSeqCommand(
+                client_id=command_json["client_id"]
+            )
+        case "ChangeLockHolderCommand":
+            new_command = cs.ChangeLockHolderCommand(
+                client_id=command_json["client_id"]
+            )
+        case "AddAppendCommand":
+            new_command = cs.AddAppendCommand(
+                filename=command_json["filename"],
+                content=base64.b64decode(command_json["content"]),
+            )
+        case "ExecuteAppendsCommand":
+            new_command = cs.ExecuteAppendsCommand()
+        case "RemoveClientCommand":
+            new_command = cs.RemoveClientCommand(client_id=command_json["client_id"])
+
+    return LogEntry(new_command)
 
 
 def log_entry_grpc_to_object(entry: raft_pb2.LogEntry) -> LogEntry:

@@ -12,14 +12,9 @@ import grpc
 root_directory = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_directory))
 
-from grpc_start import commands as cs
-from grpc_start import (  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402  # noqa: E402
-    lock_pb2,
-    lock_pb2_grpc,
-    raft_pb2_grpc,
-    raft_server,
-)
-from grpc_start import log_entries as log
+from grpc_start import commands as cs  # noqa: E402
+from grpc_start import lock_pb2, lock_pb2_grpc, raft_pb2_grpc, raft_server
+from grpc_start import log_entries as log  # noqa: E402
 
 # The server is required to have the following functionality:
 # 1.  Create 100 files that clients can write. The file name should strictly follow this format "file_0", "file_1", ..., "file_99".
@@ -32,7 +27,7 @@ LOCK_TIMEOUT = 4
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self, ip, port):
+    def __init__(self, ip="localhost", port="50051"):
         self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
@@ -52,6 +47,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.raft_server: raft_server.RaftServer  # purely for type hints
 
+        self.file_folder = "./files_" + str(port)
+
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
         if DEBUG:
@@ -61,6 +58,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_timer:
             self.lock_timer.cancel()
         self.lock_timer = threading.Timer(LOCK_TIMEOUT, self.force_release_lock)
+        self.lock_timer.daemon = True
         self.lock_timer.start()
 
     def force_release_lock(self):
@@ -110,33 +108,33 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq
             )
 
+    def increment_client_seq(self, client_id):
+        self.raft_server.send_append_entry_rpcs(
+            log.LogEntry(cs.IncrementClientSeqCommand(client_id))
+        )
+        self.clients[client_id]["seq"] += 1
 
     def client_init(self, request, context):
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
-
+        print("client_init received from " + str(context.peer()))
         client_ip = context.peer()
-        client_id = self.newClientId
-        self.newClientId += 1
+        client_id = request.rc
         client_seq = 1  # sequence number of next expected request
 
-        for client in self.clients:
-            existing_ip = self.clients[client]["ip"]
-            existing_seq = self.clients[client]["seq"]
-
-            if existing_ip == client_ip:
-                # client is attempting to rejoin a server that already has a record for it
-                print("duplicate client_init")
-                return lock_pb2.Int(rc=existing_ip, seq=existing_seq)
-
-        self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
-        if DEBUG:
-            print("client_init received: " + str(request.rc))
-            print("connected clients: " + str(self.clients))
+        if client_id in self.clients:
+            existing_seq = self.clients[client_id]["seq"]
+            # client is attempting to rejoin a server that already has a record for it
+            print(f"duplicate client_init from {client_id}")
+            return lock_pb2.Int(rc=client_id, seq=existing_seq)
 
         self.raft_server.send_append_entry_rpcs(
             log.LogEntry(cs.AddClientCommand(client_id, client_ip))
         )
+        self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
+        if DEBUG:
+            print("client_init received: " + str(request.rc))
+            print("connected clients: " + str(self.clients))
         return lock_pb2.Int(rc=client_id, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
@@ -156,16 +154,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         if self.lock_owner is None:
             self.waiting_list.append(request.client_id)
-            self.lock_owner = client_id
-            self.start_lock_timer()
-            self.clients[client_id]["seq"] += 1
 
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
             self.raft_server.send_append_entry_rpcs(
                 log.LogEntry(cs.ChangeLockHolderCommand(client_id))
             )
+            self.lock_owner = client_id
+
+            self.start_lock_timer()
+
+            self.increment_client_seq(client_id)
 
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
@@ -173,7 +170,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         elif self.lock_owner == request.client_id:
             print(f"Client {client_id} already has the lock.")
             self.start_lock_timer()
-            self.clients[client_id]["seq"] += 1
+            self.increment_client_seq(client_id)
+
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
@@ -182,16 +180,12 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         while True:
             if self.waiting_list[0] == request.client_id:
                 # essentially, head of waiting list is always current owner
-                # could, in theory, remove self.lock_owner entirely but this might get confusing real fast
-                self.clients[client_id]["seq"] += 1
-                print(f"LOCK OWNER: {self.lock_owner}")
+                self.increment_client_seq(client_id)
 
-                self.raft_server.send_append_entry_rpcs(
-                    log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-                )
-                self.raft_server.send_append_entry_rpcs(
-                    log.LogEntry(cs.ChangeLockHolderCommand(client_id))
-                )
+                print(f"LOCK OWNER: {self.lock_owner}")
+                # not sending rpcs to change lock holder here, as we're assuming this was already done
+                # in the lock_release that granted this client the lock
+
                 return lock_pb2.Response(
                     status=lock_pb2.Status.SUCCESS, seq=client_seq + 1
                 )
@@ -203,15 +197,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def execute_appends(self):
         # execute all stashed changes to files - this also removes all append entries
+        self.raft_server.send_append_entry_rpcs(
+            log.LogEntry(cs.ExecuteAppendsCommand())
+        )
+
         while self.appends:
             file_path, bytes = self.appends.popleft()
 
             with open(file_path, "ab") as file:
                 file.write(bytes)
-
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.ExecuteAppendsCommand())
-        )
 
     def lock_release(self, request, context) -> lock_pb2.Response:
         if not (self.raft_server.is_leader()):
@@ -229,10 +223,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_owner == request.client_id:
             self.grant_lock_to_next_client()
             # resets timer, as this is a call from the current lock owner, proving that client is alive
-            self.clients[client_id]["seq"] += 1
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
+            self.increment_client_seq(client_id)
 
             self.start_lock_timer()
 
@@ -241,7 +232,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
         else:
-            self.clients[client_id]["seq"] += 1
+            self.increment_client_seq(client_id)
+
             # good idea to have this anyhow, as client could call release before ever calling acquire
             return lock_pb2.Response(
                 status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]
@@ -262,27 +254,25 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             f"Server: file_append received: {request.client_id}, {request.filename}, deque: {self.waiting_list}"
         )
 
-        self.clients[client_id]["seq"] += 1
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-        )
+        self.increment_client_seq(client_id)
 
         if self.lock_owner == request.client_id:
             # resets timer, as this is a call from the current lock owner, proving that client is alive
             self.start_lock_timer()
 
             filename = request.filename
-            file_path = f"./files/{filename}"
+
+            file_path = self.file_folder + "/" + filename
+            # file_path = f"./files/{filename}"
 
             if os.path.isfile(file_path):
                 # add file append operation to appends queue
-                self.appends.append((file_path, request.content))
-
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(
                         cs.AddAppendCommand(filename=file_path, content=request.content)
                     )
                 )
+                self.appends.append((file_path, request.content))
 
                 return lock_pb2.Response(
                     status=lock_pb2.Status.SUCCESS,
@@ -290,7 +280,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 )
             else:
                 if DEBUG:
-                    print(f"File {filename} error.")
+                    print(f"File {file_path} error.")
                 return lock_pb2.Response(
                     status=lock_pb2.Status.FILE_ERROR,
                     seq=self.clients[client_id]["seq"],
@@ -302,38 +292,21 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.LOCK_EXPIRED, seq=self.clients[client_id]["seq"]
             )
 
-    def keep_alive(self, request, context) -> lock_pb2.Response:
-        """Handle keep-alive messages from the client."""
-        if not (self.raft_server.is_leader()):
-            return lock_pb2.Response(leader=self.raft_server.leader)
-
-        client_id = request.client_id
-        if client_id == self.lock_owner:
-            print(f"Keep-alive received from client {client_id}. Resetting lock timer.")
-            self.start_lock_timer()
-            self.clients[client_id]["seq"] += 1
-            return lock_pb2.Response(
-                status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
-            )
-        else:
-            return lock_pb2.Response(
-                status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]
-            )
-
     def client_close(self, request, context):
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
 
         # get process id and remove from set
         client_id = request.rc
-        if client_id in self.clients:
-            while self.lock_owner == client_id:
-                time.sleep(0.01)
-            del self.clients[client_id]
 
         self.raft_server.send_append_entry_rpcs(
             log.LogEntry(cs.RemoveClientCommand(client_id))
         )
+
+        if client_id in self.clients:
+            while self.lock_owner == client_id:
+                time.sleep(0.01)
+            del self.clients[client_id]
 
         if DEBUG:
             print("client_close received: " + str(request.rc))
@@ -344,6 +317,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     # ONLY EXECUTED BY LOCKSERVERS ATTACHED TO FOLLOWER NODES
     # got a command from the leader, apply to internal state
     def commit_command(self, command: cs.Command):
+        print(f"Committing command {str(command)} on machine {self.ip}:{self.port}")
         if isinstance(command, cs.AddClientCommand):
             client_ip = command.client_ip
             client_id = command.client_id
@@ -385,16 +359,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.start()
         print("Server started, listening on ", self.port)
         time.sleep(5)
-        thread_raft = threading.Thread(target=self.raft_server.find_leader)
-        thread_raft.start()
 
     def stop(self):
         self.lock_timer.cancel()
         self.server.stop(0)
 
     def where_is_server(self, request, context):
-        ip = "0.0.0.0"
-        port = -1
+        leader = self.raft_server.leader
+        ip = self.ip
+        port = self.port
         return lock_pb2.ServerLocation(ip=ip, port=port)
 
 
@@ -402,22 +375,29 @@ def create_files(n=100):
     # needs to be modified to account for multiple servers
 
     # create directory & files if necessary:
-    if not os.path.exists("./files"):
-        os.makedirs("./files")
+    for port in ["50051", "50052", "50053"]:
+        if not os.path.exists("./files_" + str(port)):
+            os.makedirs("./files_" + str(port))
 
-        for i in range(n):
-            with open("./files/file_" + str(i), "w") as f:
-                f.write("")
+            for i in range(n):
+                with open(f"./files_{port}/file_{i}", "w") as f:
+                    f.write("")
 
 
 def reset_files(n=100):
     # they might or might not exist:
-    for i in range(n):
-        with open("./files/file_" + str(i), "w") as f:
-            f.write("")
+    # print("RESET FILE IS CALLED")
+    for port in ["50051", "50052", "50053"]:
+        if not os.path.exists(f"./files_{port}"):
+            os.makedirs(f"./files_{port}")
+
+        for i in range(n):
+            with open(f"./files_{port}/file_{i}", "w") as f:
+                f.write("")
 
     # delete files in ./log/*
     for file in os.listdir("./log"):
+        print(file)
         os.remove(os.path.join("./log", file))
 
 

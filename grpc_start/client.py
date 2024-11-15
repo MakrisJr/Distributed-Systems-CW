@@ -35,14 +35,15 @@ def status_str(x):
 
 
 class Client:
-    def __init__(self):
-        self.client_id = 0
+    def __init__(self, id):
+        self.client_id = id
         self.seq = 0
         self.request_history = {}  # {seq: request}
         self.server_ip = "localhost"
         self.server_port = 50051
         self.channel = grpc.insecure_channel(f"{self.server_ip}:{self.server_port}")
         self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+        # client's port :
 
     def RPC_client_init(self):
         try:
@@ -93,7 +94,7 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                self.RPC_where_is_server()
+                # self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -102,6 +103,7 @@ class Client:
         return None
 
     def RPC_lock_acquire(self):
+        print("CALLED RPC_LOCK_ACQUIRE")
         response = self.retry_rpc_call(
             self.stub.lock_acquire,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
@@ -138,6 +140,7 @@ class Client:
     def RPC_append_file(
         self, file_number, text, lost_before_server=False, lost_after_server=False
     ):
+        print("CALLED RPC_APPEND_FILE")
         if lost_before_server:  # simulate packet loss
             if DEBUG:
                 print(f"Client {self.client_id}: Simulating packet loss.")
@@ -194,6 +197,7 @@ class Client:
             return False
 
     def RPC_lock_release(self):
+        print("CALLED RPC_LOCK_RELEASE")
         response = self.retry_rpc_call(
             self.stub.lock_release,
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
@@ -229,6 +233,7 @@ class Client:
             return False
 
     def RPC_client_close(self):
+        print("CALLED RPC_CLIENT_CLOSE")
         response = self.retry_rpc_call(
             self.stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )

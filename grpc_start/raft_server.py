@@ -73,12 +73,14 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             self.new_leader_timeout.cancel()
 
         heartbeat_thread = threading.Thread(target=self.send_heartbeats)
+        heartbeat_thread.daemon = True
         heartbeat_thread.start()
 
     def send_heartbeats(self):
         while self.state == RaftServerState.LEADER:
             # print(f"Raft server {self.server_port}: Sending heartbeat.")
             self.send_append_entry_rpcs(entry=None)
+            # print(f"Raft server {self.server_port}: Sending heartbeat.")
             time.sleep(LEADER_HEARTBEAT_TIMEOUT)
 
         exit()
@@ -92,30 +94,32 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def establish_channels_stubs(self):
         self.channels = {}
         self.stubs = {}
-
+        active_servers = []
         for raft_node in self.raft_servers:
             try:
                 channel = grpc.insecure_channel(raft_node)
+                grpc.channel_ready_future(channel).result(timeout=1)
                 stub = raft_pb2_grpc.RaftServiceStub(channel)
                 self.channels[raft_node] = channel
                 self.stubs[raft_node] = stub
                 print(f"{self.server_port}: Connected to {raft_node}")
-            except grpc.RpcError as e:
-                print(
-                    f"Raft server {self.server_port}: Error connecting to {raft_node}: {e}"
-                )
-                continue
+                # check if node is alive, if not remove it from the list
+                active_servers.append(raft_node)
+            except grpc.FutureTimeoutError:
+                print(f"{self.server_port}: Could not connect to {raft_node}")
+
+        self.raft_servers = active_servers
 
     def retry_rpc_call(self, rpc_func, *args, **kwargs):
         for attempt in range(RETRY_LIMIT):
             try:
                 response = rpc_func(*args, **kwargs)
                 return response
-            except grpc.RpcError as e:
+            except grpc.RpcError:
                 print(
                     f"Raft {self.server_port}: grpc error. Attempt {attempt + 1}/{RETRY_LIMIT}"
                 )
-                print(e)
+                # print(e)
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -126,9 +130,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def find_leader(self):
         while True:
             print(f"Raft server {self.server_port}: Finding leader.")
-            for server in self.raft_servers:
+            for raft_node in self.raft_servers:
                 try:
-                    response = self.stubs[server].where_is_leader(raft_pb2.Empty())
+                    response = self.stubs[raft_node].where_is_leader(raft_pb2.Empty())
                     if len(response.value) > 0:
                         print(
                             f"Raft server {self.server_port}: Found leader: {response.value}"
@@ -137,9 +141,11 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         return response.value
                 except grpc.RpcError:
                     print(
-                        f"Raft server {self.server_port}: failed to contact node {server}"
+                        f"Raft server {self.server_port}: failed to contact node {raft_node}"
                     )
                     continue
+
+            time.sleep(0.1)
 
     def where_is_leader(self, request, context):
         return raft_pb2.String(value=self.leader)
@@ -153,7 +159,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             random.uniform(MIN_LEADER_CHANGE_TIMEOUT, MAX_LEADER_CHANGE_TIMEOUT),
             self.become_new_leader,
         )
-
+        self.new_leader_timeout.daemon = True
         self.new_leader_timeout.start()
 
     def become_new_leader(self):
@@ -170,7 +176,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         """Reads from logfile into self.log"""
         try:
             with open(self.log_file_path, "r") as f:
-                self.log = json.load(f)
+                log_entries_json = json.load(f)
+                for log_entry_json in log_entries_json:
+                    self.log.append(log.log_entry_json_to_object(log_entry_json))
         except FileNotFoundError:
             print("Log file not found.")
         except json.JSONDecodeError:
@@ -183,7 +191,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.state = RaftServerState.FOLLOWER
         self.start_new_leader_timer()
         self.leader = request.leaderID
-        # print("REQUEST: ", request.entry)
 
         if len(str(request.entry)) > 0:
             log_entry = log.log_entry_grpc_to_object(request.entry)
@@ -192,8 +199,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             command = log_entry.command
             self.lock_server.commit_command(command)
-        # else:
-        #     print("heartbeat")
 
         return raft_pb2.Bool(value=True)
 
@@ -201,11 +206,12 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
-        print(f"Raft server {self.server_port}: Appending entry {entry}")
+        # print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
-            print(f"Leader is {self.server_port}, {self.leader}")
+            # print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
+                print(f"Sending append_entry to {raft_node}")
                 try:
                     if entry:
                         print(f"Sending append_entry {entry.command} to {raft_node}")
@@ -239,7 +245,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             if entry:
                 self.log.append(entry)
                 self.serialise_log()
-                self.lock_server.commit_command(entry.command)
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
