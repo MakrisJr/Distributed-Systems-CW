@@ -207,11 +207,12 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
-        print(f"Raft server {self.server_port}: Appending entry {entry}")
+        # print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
-            print(f"Leader is {self.server_port}, {self.leader}")
+            # print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
+                print(f"Sending append_entry to {raft_node}")
                 try:
                     if entry:
                         print(f"Sending append_entry {entry.command} to {raft_node}")
@@ -244,8 +245,11 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # execute command itself
             if entry:
                 self.log.append(entry)
+                print("before serialise log")
                 self.serialise_log()
+                print("after serialise log")
                 self.lock_server.commit_command(entry.command)
+                print("after commit command")
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
