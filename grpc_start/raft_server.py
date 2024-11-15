@@ -80,6 +80,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         while self.state == RaftServerState.LEADER:
             # print(f"Raft server {self.server_port}: Sending heartbeat.")
             self.send_append_entry_rpcs(entry=None)
+            # print(f"Raft server {self.server_port}: Sending heartbeat.")
             time.sleep(LEADER_HEARTBEAT_TIMEOUT)
 
         exit()
@@ -210,6 +211,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
+                print(f"Sending append_entry to {raft_node}")
                 try:
                     if entry:
                         print(f"Sending append_entry {entry.command} to {raft_node}")
