@@ -17,7 +17,7 @@ class AddClientCommand(Command):
 
     def toJson(self):
         return {
-            "command": "AddClientCommand",
+            "type": "AddClientCommand",
             "client_id": self.client_id,
             "client_ip": self.client_ip,
         }
@@ -29,7 +29,7 @@ class IncrementClientSeqCommand(Command):
         self.client_id = client_id
 
     def toJson(self):
-        return {"command": "IncrementClientSeqCommand", "client_id": self.client_id}
+        return {"type": "IncrementClientSeqCommand", "client_id": self.client_id}
 
 
 @dataclass
@@ -38,7 +38,7 @@ class ChangeLockHolderCommand(Command):
         self.client_id = client_id
 
     def toJson(self):
-        return {"command": "ChangeLockHolderCommand", "client_id": self.client_id}
+        return {"type": "ChangeLockHolderCommand", "client_id": self.client_id}
 
 
 @dataclass
@@ -49,7 +49,7 @@ class AddAppendCommand(Command):
 
     def toJson(self):
         return {
-            "command": "AddAppendCommand",
+            "type": "AddAppendCommand",
             "filename": self.filename,
             "content": self.content,
         }
@@ -60,7 +60,7 @@ class ExecuteAppendsCommand(Command):
     pass
 
     def toJson(self):
-        return {"command": "ExecuteAppendsCommand"}
+        return {"type": "ExecuteAppendsCommand"}
 
 
 @dataclass
@@ -69,4 +69,7 @@ class RemoveClientCommand(Command):
         self.client_id = client_id
 
     def toJson(self):
-        return {"command": "RemoveClientCommand", "client_id": self.client_id}
+        return {"type": "RemoveClientCommand", "client_id": self.client_id}
+
+
+# def json_to_command(cs_json):

@@ -126,9 +126,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def find_leader(self):
         while True:
             print(f"Raft server {self.server_port}: Finding leader.")
-            for server in self.raft_servers:
+            for raft_node in self.raft_servers:
                 try:
-                    response = self.stubs[server].where_is_leader(raft_pb2.Empty())
+                    response = self.stubs[raft_node].where_is_leader(raft_pb2.Empty())
                     if len(response.value) > 0:
                         print(
                             f"Raft server {self.server_port}: Found leader: {response.value}"
@@ -137,7 +137,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         return response.value
                 except grpc.RpcError:
                     print(
-                        f"Raft server {self.server_port}: failed to contact node {server}"
+                        f"Raft server {self.server_port}: failed to contact node {raft_node}"
                     )
                     continue
 
@@ -170,7 +170,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         """Reads from logfile into self.log"""
         try:
             with open(self.log_file_path, "r") as f:
-                self.log = json.load(f)
+                log_entries_json = json.load(f)
+                for log_entry_json in log_entries_json:
+                    self.log.append(log.log_entry_json_to_object(log_entry_json))
         except FileNotFoundError:
             print("Log file not found.")
         except json.JSONDecodeError:
