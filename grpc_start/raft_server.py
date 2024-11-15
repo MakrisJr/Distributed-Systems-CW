@@ -92,30 +92,32 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def establish_channels_stubs(self):
         self.channels = {}
         self.stubs = {}
-
+        active_servers = []
         for raft_node in self.raft_servers:
             try:
                 channel = grpc.insecure_channel(raft_node)
+                grpc.channel_ready_future(channel).result(timeout=1)
                 stub = raft_pb2_grpc.RaftServiceStub(channel)
                 self.channels[raft_node] = channel
                 self.stubs[raft_node] = stub
                 print(f"{self.server_port}: Connected to {raft_node}")
-            except grpc.RpcError as e:
-                print(
-                    f"Raft server {self.server_port}: Error connecting to {raft_node}: {e}"
-                )
-                continue
+                # check if node is alive, if not remove it from the list
+                active_servers.append(raft_node)
+            except grpc.FutureTimeoutError:
+                print(f"{self.server_port}: Could not connect to {raft_node}")
+
+        self.raft_servers = active_servers
 
     def retry_rpc_call(self, rpc_func, *args, **kwargs):
         for attempt in range(RETRY_LIMIT):
             try:
                 response = rpc_func(*args, **kwargs)
                 return response
-            except grpc.RpcError as e:
+            except grpc.RpcError:
                 print(
                     f"Raft {self.server_port}: grpc error. Attempt {attempt + 1}/{RETRY_LIMIT}"
                 )
-                print(e)
+                # print(e)
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -140,6 +142,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         f"Raft server {self.server_port}: failed to contact node {raft_node}"
                     )
                     continue
+
+            time.sleep(0.1)
 
     def where_is_leader(self, request, context):
         return raft_pb2.String(value=self.leader)

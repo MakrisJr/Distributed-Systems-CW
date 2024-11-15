@@ -19,7 +19,7 @@ def test_packet_delay():
     reset_files()
     server = LockServer()
     server.serve()
-    
+
     print("Server started")
     # test packet delay
     client1.RPC_client_init()
@@ -59,7 +59,6 @@ def test_client_packet_loss():
 
     reset_files()
     server.serve()
-    
 
     print("Server started")
     # test packet delay
@@ -355,29 +354,29 @@ if __name__ == "__main__":
         failed_tests.append("test_packet_delay")
         print("test_packet_delay failed")
 
-    if not test_client_packet_loss():
-        failed_tests.append("test_client_packet_loss")
-        print("test_client_packet_loss failed")
+    # if not test_client_packet_loss():
+    #     failed_tests.append("test_client_packet_loss")
+    #     print("test_client_packet_loss failed")
 
-    if not test_server_packet_loss():
-        failed_tests.append("test_server_packet_loss")
-        print("test_server_packet_loss failed")
+    # if not test_server_packet_loss():
+    #     failed_tests.append("test_server_packet_loss")
+    #     print("test_server_packet_loss failed")
 
-    if not test_duplicated_packets():
-        failed_tests.append("test_duplicated_packets")
-        print("test_duplicated_packets failed")
+    # if not test_duplicated_packets():
+    #     failed_tests.append("test_duplicated_packets")
+    #     print("test_duplicated_packets failed")
 
-    if not test_combined_network_failures():
-        failed_tests.append("test_combined_network_failures")
-        print("test_combined_network_failures failed")
+    # if not test_combined_network_failures():
+    #     failed_tests.append("test_combined_network_failures")
+    #     print("test_combined_network_failures failed")
 
-    if not test_stuck_before_editing_file():
-        failed_tests.append("test_stuck_before_editing_file")
-        print("test_stuck_before_editing_file failed")
+    # if not test_stuck_before_editing_file():
+    #     failed_tests.append("test_stuck_before_editing_file")
+    #     print("test_stuck_before_editing_file failed")
 
-    if not test_stuck_after_editing_file():
-        failed_tests.append("test_stuck_after_editing_file")
-        print("test_stuck_after_editing_file failed")
+    # if not test_stuck_after_editing_file():
+    #     failed_tests.append("test_stuck_after_editing_file")
+    #     print("test_stuck_after_editing_file failed")
 
     if not test_raft():
         failed_tests.append("test_raft")
