@@ -46,6 +46,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
         self.establish_channels_stubs()
+        print("Servers available: ", self.raft_servers)
 
         self.leader = None
 
@@ -144,7 +145,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         f"Raft server {self.server_port}: failed to contact node {raft_node}"
                     )
                     continue
-
+            if len(self.raft_servers) == 0:
+                # become leader
+                self.leader_start()
+                return f"{self.server_ip}:{self.server_port}"
             time.sleep(0.1)
 
     def where_is_leader(self, request, context):
@@ -206,9 +210,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
-        # print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
-            # print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
                 print(f"Sending append_entry to {raft_node}")
@@ -252,14 +254,16 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.deserialise_log()  # get cached log entries
         self.leader = self.find_leader()
 
-        # get missing log entries (if any) from leader
-        missing_log_grpcs = self.retry_rpc_call(
-            self.stubs[self.leader].recover_logs, raft_pb2.Int(value=len(self.log))
-        )
-        if missing_log_grpcs:
-            for log_grpc in missing_log_grpcs:
-                self.log.append(log.log_entry_grpc_to_object(log_grpc))
+        if not self.is_leader():
+            # get missing log entries (if any) from leader
+            missing_log_grpcs = self.retry_rpc_call(
+                self.stubs[self.leader].recover_logs, raft_pb2.Int(value=len(self.log))
+            )
+            if missing_log_grpcs:
+                for log_grpc in missing_log_grpcs:
+                    self.log.append(log.log_entry_grpc_to_object(log_grpc))
 
+        server.reset_files()
         for entry in self.log:
             self.lock_server.commit_command(entry.command)
 
