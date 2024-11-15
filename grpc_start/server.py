@@ -187,6 +187,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 self.increment_client_seq(client_id)
 
                 print(f"LOCK OWNER: {self.lock_owner}")
+
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(cs.ChangeLockHolderCommand(client_id))
                 )
