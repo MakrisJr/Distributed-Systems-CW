@@ -377,7 +377,7 @@ def test_raft():
 
     time.sleep(7)
 
-    client1 = Client()
+    client1 = Client(1)
     client1.RPC_client_init()
 
     time.sleep(15)
@@ -420,12 +420,12 @@ if __name__ == "__main__":
     #     failed_tests.append("test_stuck_after_editing_file")
     #     print("test_stuck_after_editing_file failed")
 
-    if not test_single_server_fails_lock_free():
-        failed_tests.append("test_single_server_fails_lock_free")
-        print("test_single_server_fails_lock_free failed")
-    # if not test_raft():
-    #     failed_tests.append("test_raft")
-    #     print("test_raft failed")
+    # if not test_single_server_fails_lock_free():
+    #     failed_tests.append("test_single_server_fails_lock_free")
+    #     print("test_single_server_fails_lock_free failed")
+    if not test_raft():
+        failed_tests.append("test_raft")
+        print("test_raft failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")

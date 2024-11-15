@@ -183,8 +183,6 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 self.increment_client_seq(client_id)
 
                 print(f"LOCK OWNER: {self.lock_owner}")
-                # not sending rpcs to change lock holder here, as we're assuming this was already done
-                # in the lock_release that granted this client the lock
 
                 return lock_pb2.Response(
                     status=lock_pb2.Status.SUCCESS, seq=client_seq + 1
