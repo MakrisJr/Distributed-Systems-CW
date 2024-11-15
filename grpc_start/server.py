@@ -338,7 +338,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             self.appends.append((command.filename, command.content))
 
         elif isinstance(command, cs.ExecuteAppendsCommand):
-            self.execute_appends()
+            while self.appends:
+                file_path, bytes = self.appends.popleft()
+
+                with open(file_path, "ab") as file:
+                    file.write(bytes)
 
         elif isinstance(command, cs.RemoveClientCommand):
             client_id = command.client_id
