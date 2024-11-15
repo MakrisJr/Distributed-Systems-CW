@@ -352,6 +352,27 @@ def test_raft():
     return True
 
 
+# Complex test cases
+def replica_node_failures_fast_recovery():
+    raise NotImplementedError
+
+
+def replica_node_failures_slow_recovery():
+    raise NotImplementedError
+
+
+def primary_node_failures_slow_recovery_outside_critical_section():
+    raise NotImplementedError
+
+
+def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
+    raise NotImplementedError
+
+
+def primary_and_replica_node_failures():
+    raise NotImplementedError
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
