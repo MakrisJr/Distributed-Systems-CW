@@ -35,14 +35,15 @@ def status_str(x):
 
 
 class Client:
-    def __init__(self):
-        self.client_id = 0
+    def __init__(self, id):
+        self.client_id = id
         self.seq = 0
         self.request_history = {}  # {seq: request}
         self.server_ip = "localhost"
         self.server_port = 50051
         self.channel = grpc.insecure_channel(f"{self.server_ip}:{self.server_port}")
         self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+        # client's port :
 
     def RPC_client_init(self):
         try:

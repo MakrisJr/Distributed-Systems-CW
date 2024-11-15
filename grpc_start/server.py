@@ -111,20 +111,16 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
     def client_init(self, request, context):
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
-
+        print("client_init received from " + str(context.peer()))
         client_ip = context.peer()
-        client_id = self.newClientId
-        self.newClientId += 1
+        client_id = request.rc
         client_seq = 1  # sequence number of next expected request
 
-        for client in self.clients:
-            existing_ip = self.clients[client]["ip"]
-            existing_seq = self.clients[client]["seq"]
-
-            if existing_ip == client_ip:
-                # client is attempting to rejoin a server that already has a record for it
-                print(f"duplicate client_init from {client}")
-                return lock_pb2.Int(rc=client, seq=existing_seq)
+        if client_id in self.clients:
+            existing_seq = self.clients[client_id]["seq"]
+            # client is attempting to rejoin a server that already has a record for it
+            print(f"duplicate client_init from {client_id}")
+            return lock_pb2.Int(rc=client_id, seq=existing_seq)
 
         self.clients[client_id] = {"ip": client_ip, "seq": client_seq}
         if DEBUG:

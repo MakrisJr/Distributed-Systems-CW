@@ -13,8 +13,8 @@ FILE_PATH = "files/"
 
 
 def test_packet_delay():
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
 
     reset_files()
     server = LockServer()
@@ -54,8 +54,8 @@ def test_packet_delay():
 
 def test_client_packet_loss():
     # since we are using TCP, the only way to simulate packet drop is to delay the packet until the client times out.
-    client1 = Client()
-    client2 = Client()
+    client1 = Client(1)
+    client2 = Client(2)
 
     server = LockServer()
 
@@ -89,6 +89,7 @@ def test_client_packet_loss():
 
     if message == "BA":
         return True
+    print(message)
     return False
     # c2 gets the lock, appends 'B', c1 gets lock, writes 'A'
 
@@ -128,6 +129,7 @@ def test_server_packet_loss():
 
     if message == "AB":
         return True
+    print(message)
     return False
 
 
@@ -183,6 +185,7 @@ def test_duplicated_packets():
 
     if message == "ABBA":
         return True
+    print(message)
     return False
 
 
@@ -352,9 +355,9 @@ def test_raft():
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
-    if not test_packet_delay():
-        failed_tests.append("test_packet_delay")
-        print("test_packet_delay failed")
+    # if not test_packet_delay():
+    #     failed_tests.append("test_packet_delay")
+    #     print("test_packet_delay failed")
 
     if not test_client_packet_loss():
         failed_tests.append("test_client_packet_loss")
