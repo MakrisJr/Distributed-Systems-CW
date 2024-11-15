@@ -399,6 +399,8 @@ def replica_node_failures_fast_recovery():
     client2 = Client(2)
 
     reset_files()
+
+    # Start server threads
     thread1 = threading.Thread(target=server1.serve)
     thread2 = threading.Thread(target=server2.serve)
     thread3 = threading.Thread(target=server3.serve)
@@ -407,40 +409,81 @@ def replica_node_failures_fast_recovery():
     thread2.start()
     thread3.start()
 
-    time.sleep(2)
+    print("Servers started")
+
+    time.sleep(5)
+
+    # Initialize clients
     client1.RPC_client_init()
+    print("Client 1 initialized")
     client2.RPC_client_init()
+    print("Client 2 initialized")
 
+    # Client 1 acquires lock and appends to all files
     client1.RPC_lock_acquire()
+    print("Client 1 acquired lock")
     client1.RPC_append_file("1", "A")
+    print("Client 1 appended 'A' to file 1")
+    client1.RPC_append_file("2", "A")
+    print("Client 1 appended 'A' to file 2")
 
+    # Simulate Server 2 failure
     server2.stop()
-    time.sleep(2)
+    print("Server 2 stopped")
+    time.sleep(1)
 
+    # Continue appending with Server 2 down
+    client1.RPC_append_file("3", "A")
+    print("Client 1 appended 'A' to file 3")
+    client1.RPC_lock_release()
+    print("Client 1 released lock")
+
+    # Restart Server 2
     thread2 = threading.Thread(target=server2.serve)
     thread2.start()
-    time.sleep(2)
+    print("Server 2 restarting...")
+    time.sleep(5)  # Allow Server 2 to fully recover
 
-    client1.RPC_append_file("2", "A")
-    client1.RPC_lock_release()
-
+    # Client 2 acquires lock and appends to all files
     client2.RPC_lock_acquire()
+    print("Client 2 acquired lock")
+    client2.RPC_append_file("1", "B")
+    print("Client 2 appended 'B' to file 1")
+    client2.RPC_append_file("2", "B")
+    print("Client 2 appended 'B' to file 2")
     client2.RPC_append_file("3", "B")
+    print("Client 2 appended 'B' to file 3")
     client2.RPC_lock_release()
+    print("Client 2 released lock")
 
+    # Stop all servers
     server1.stop()
     server2.stop()
     server3.stop()
 
-    expected = set(["AB", "BA"])
-    for i in range(1, 4):
-        with open(f"{server1.file_folder}/file_{i}", "r") as file:
-            content = file.read()
-            if content not in expected:
-                print(f"Test failed for file_{i}: {content}")
-                return False
+    print("Servers stopped")
 
-    return True
+    servers = [server1, server2, server3]
+
+    # Validate results
+    print("Checking files")
+    expected = set(["AB", "BA"])
+
+    for server in servers:
+        print(f"Checking files in {server.file_folder}")
+        for i in range(1, 4):  # Adjust the range based on the number of files to check
+            try:
+                with open(f"{server.file_folder}/file_{i}", "r") as file:
+                    content = file.read()
+                    if content not in expected:
+                        print(
+                            f"Test failed for {server.file_folder}/file_{i}: {content}"
+                        )
+                        exit(1)  # Use exit(1) or return False in a function
+            except FileNotFoundError:
+                print(f"File {server.file_folder}/file_{i} not found")
+                exit(1)  # Handle the missing file as a failure
+    print("All files passed")
 
 
 def replica_node_failures_slow_recovery():

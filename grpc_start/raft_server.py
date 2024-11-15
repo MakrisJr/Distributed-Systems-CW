@@ -64,6 +64,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def leader_start(self):
         # called when first coming into power
+        print(f"Raft server {self.server_port}: Initialized as leader.")
         self.state = RaftServerState.LEADER
         self.leader = f"{self.server_ip}:{self.server_port}"
         self.send_append_entry_rpcs(
@@ -191,7 +192,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entry(self, request, context):
         # if we receive an append_entries message, we know not to become the new leader
-
+        print(f"Rafter server {self.server_port}: Turned into follower.")
         self.state = RaftServerState.FOLLOWER
         self.start_new_leader_timer()
         self.leader = request.leaderID
@@ -252,6 +253,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):
+        print(f"Raft server {self.server_port}: Initiating recovery as follower.")
         self.state = RaftServerState.FOLLOWER
         self.deserialise_log()  # get cached log entries
         self.leader = self.find_leader()
