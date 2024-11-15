@@ -189,11 +189,15 @@ class Client:
             self.seq = response.seq
             return False
 
-        else:  # response and response.status == lock_pb2.Status.FILE_ERROR:
+        elif response and response.status == lock_pb2.Status.FILE_ERROR:
+            print("Invalid filename")
+            self.seq = response.seq
+            return False
+        else:
             print(
                 f"Client {self.client_id}: Failed to append file after {RETRY_LIMIT} retries."
             )
-            self.seq = response.seq
+
             return False
 
     def RPC_lock_release(self):
