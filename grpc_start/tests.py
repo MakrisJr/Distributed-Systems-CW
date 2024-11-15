@@ -377,7 +377,7 @@ def test_raft():
 
     time.sleep(7)
 
-    client1 = Client()
+    client1 = Client(1)
     client1.RPC_client_init()
 
     time.sleep(15)
@@ -391,7 +391,56 @@ def test_raft():
 
 # Complex test cases
 def replica_node_failures_fast_recovery():
-    raise NotImplementedError
+    server1 = LockServer("localhost", 50051)
+    server2 = LockServer("localhost", 50052)
+    server3 = LockServer("localhost", 50053)
+
+    client1 = Client(1)
+    client2 = Client(2)
+
+    reset_files()
+    thread1 = threading.Thread(target=server1.serve)
+    thread2 = threading.Thread(target=server2.serve)
+    thread3 = threading.Thread(target=server3.serve)
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+
+    time.sleep(2)
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    client1.RPC_lock_acquire()
+    client1.RPC_append_file("1", "A")
+
+    server2.stop()
+    time.sleep(2)
+
+    thread2 = threading.Thread(target=server2.serve)
+    thread2.start()
+    time.sleep(2)
+
+    client1.RPC_append_file("2", "A")
+    client1.RPC_lock_release()
+
+    client2.RPC_lock_acquire()
+    client2.RPC_append_file("3", "B")
+    client2.RPC_lock_release()
+
+    server1.stop()
+    server2.stop()
+    server3.stop()
+
+    expected = set(["AB", "BA"])
+    for i in range(1, 4):
+        with open(f"{server1.file_folder}/file_{i}", "r") as file:
+            content = file.read()
+            if content not in expected:
+                print(f"Test failed for file_{i}: {content}")
+                return False
+
+    return True
 
 
 def replica_node_failures_slow_recovery():
@@ -441,12 +490,17 @@ if __name__ == "__main__":
     #     failed_tests.append("test_stuck_after_editing_file")
     #     print("test_stuck_after_editing_file failed")
 
-    if not test_single_server_fails_lock_free():
-        failed_tests.append("test_single_server_fails_lock_free")
-        print("test_single_server_fails_lock_free failed")
+    # if not test_single_server_fails_lock_free():
+    #     failed_tests.append("test_single_server_fails_lock_free")
+    #     print("test_single_server_fails_lock_free failed")
+
     # if not test_raft():
     #     failed_tests.append("test_raft")
     #     print("test_raft failed")
+
+    if not replica_node_failures_fast_recovery():
+        failed_tests.append("replica_node_failures_fast_recovery")
+        print("replica_node_failures_fast_recovery failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")
