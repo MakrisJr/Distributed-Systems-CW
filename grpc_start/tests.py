@@ -22,7 +22,7 @@ def test_packet_delay():
 
     print("Server started")
 
-    time.sleep(3)
+    time.sleep(1)
     # test packet delay
     client1.RPC_client_init()
     client2.RPC_client_init()
