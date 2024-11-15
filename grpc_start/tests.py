@@ -16,9 +16,10 @@ def test_packet_delay():
     client1 = Client()
     client2 = Client()
 
+    reset_files()
     server = LockServer()
     server.serve()
-    reset_files()
+    
     print("Server started")
     # test packet delay
     client1.RPC_client_init()
@@ -56,8 +57,9 @@ def test_client_packet_loss():
 
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
+    
 
     print("Server started")
     # test packet delay
@@ -95,8 +97,8 @@ def test_server_packet_loss():
     client2 = Client()
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -134,8 +136,8 @@ def test_duplicated_packets():
     client2 = Client()
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -189,8 +191,8 @@ def test_combined_network_failures():
     client2 = Client()
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -233,8 +235,8 @@ def test_stuck_before_editing_file():
     client2 = Client()
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -277,8 +279,8 @@ def test_stuck_after_editing_file():
     client2 = Client()
     server = LockServer()
 
-    server.serve()
     reset_files()
+    server.serve()
     print("Server started")
 
     client1.RPC_client_init()
@@ -349,33 +351,33 @@ def test_raft():
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
-    # if not test_packet_delay():
-    #     failed_tests.append("test_packet_delay")
-    #     print("test_packet_delay failed")
+    if not test_packet_delay():
+        failed_tests.append("test_packet_delay")
+        print("test_packet_delay failed")
 
-    # if not test_client_packet_loss():
-    #     failed_tests.append("test_client_packet_loss")
-    #     print("test_client_packet_loss failed")
+    if not test_client_packet_loss():
+        failed_tests.append("test_client_packet_loss")
+        print("test_client_packet_loss failed")
 
-    # if not test_server_packet_loss():
-    #     failed_tests.append("test_server_packet_loss")
-    #     print("test_server_packet_loss failed")
+    if not test_server_packet_loss():
+        failed_tests.append("test_server_packet_loss")
+        print("test_server_packet_loss failed")
 
-    # if not test_duplicated_packets():
-    #     failed_tests.append("test_duplicated_packets")
-    #     print("test_duplicated_packets failed")
+    if not test_duplicated_packets():
+        failed_tests.append("test_duplicated_packets")
+        print("test_duplicated_packets failed")
 
-    # if not test_combined_network_failures():
-    #     failed_tests.append("test_combined_network_failures")
-    #     print("test_combined_network_failures failed")
+    if not test_combined_network_failures():
+        failed_tests.append("test_combined_network_failures")
+        print("test_combined_network_failures failed")
 
-    # if not test_stuck_before_editing_file():
-    #     failed_tests.append("test_stuck_before_editing_file")
-    #     print("test_stuck_before_editing_file failed")
+    if not test_stuck_before_editing_file():
+        failed_tests.append("test_stuck_before_editing_file")
+        print("test_stuck_before_editing_file failed")
 
-    # if not test_stuck_after_editing_file():
-    #     failed_tests.append("test_stuck_after_editing_file")
-    #     print("test_stuck_after_editing_file failed")
+    if not test_stuck_after_editing_file():
+        failed_tests.append("test_stuck_after_editing_file")
+        print("test_stuck_after_editing_file failed")
 
     if not test_raft():
         failed_tests.append("test_raft")
