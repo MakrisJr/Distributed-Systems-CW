@@ -41,7 +41,7 @@ def test_packet_delay():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if not message == "":
@@ -82,7 +82,7 @@ def test_client_packet_loss():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BA":
@@ -121,7 +121,7 @@ def test_server_packet_loss():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "AB":
@@ -176,7 +176,7 @@ def test_duplicated_packets():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "ABBA":
@@ -218,7 +218,7 @@ def test_combined_network_failures():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "1AB":
@@ -264,7 +264,7 @@ def test_stuck_before_editing_file():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BBAA":
@@ -310,7 +310,7 @@ def test_stuck_after_editing_file():
     server.stop()
 
     # read file to check if message was written
-    with open(f"{FILE_PATH}file_0", "r") as file:
+    with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
     if message == "BBAA":
