@@ -389,6 +389,66 @@ def test_raft():
     return True
 
 
+def test_single_server_fails_lock_held():
+    client1 = Client(1)
+    client2 = Client(2)
+    server = LockServer()
+
+    reset_files()
+    server.serve()
+    print("Server started")
+
+    client1.RPC_client_init()
+    client2.RPC_client_init()
+
+    thread1 = threading.Thread(
+        target=client1.RPC_lock_acquire
+    )  # client 1 should acquire lock
+    thread1.start()
+
+    thread2 = threading.Thread(target=client2.RPC_lock_acquire)
+    thread2.start()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()  # now, client 2 should get the lock
+
+    thread2.join()
+    client2.RPC_append_file("0", "B")
+
+    time.sleep(2)
+    server.stop()
+
+    thread3 = threading.Thread(
+        target=client2.RPC_append_file, args=("0", "B")
+    )  # starts with failure, retries
+    thread3.start()
+
+    server = LockServer()
+    server.serve()  # server comes back online, client 2 append should work again
+
+    thread1 = threading.Thread(target=client1.RPC_lock_acquire)
+    thread1.start()
+
+    thread3.join()
+    client2.RPC_lock_release()
+
+    thread1.join()
+    client1.RPC_append_file("0", "A")
+    client1.RPC_lock_release()
+    client1.RPC_client_close()
+
+    client2.RPC_client_close()
+
+    server.stop()
+
+    # read file to check if message was written
+    with open(f"{server.file_folder}/file_0", "r") as file:
+        message = file.read()
+
+    return message == "ABBA"
+
+
 if __name__ == "__main__":
     # run all tests
     failed_tests = []
@@ -423,9 +483,10 @@ if __name__ == "__main__":
     if not test_single_server_fails_lock_free():
         failed_tests.append("test_single_server_fails_lock_free")
         print("test_single_server_fails_lock_free failed")
-    # if not test_raft():
-    #     failed_tests.append("test_raft")
-    #     print("test_raft failed")
+
+    if not test_single_server_fails_lock_held():
+        failed_tests.append("test_single_server_fails_lock_held")
+        print("test_single_server_fails_lock_held failed")
 
     if len(failed_tests) == 0:
         print("All tests passed")
