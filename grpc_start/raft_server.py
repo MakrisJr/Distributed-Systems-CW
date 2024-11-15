@@ -190,7 +190,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.state = RaftServerState.FOLLOWER
         self.start_new_leader_timer()
         self.leader = request.leaderID
-        # print("REQUEST: ", request.entry)
 
         if len(str(request.entry)) > 0:
             log_entry = log.log_entry_grpc_to_object(request.entry)
@@ -199,8 +198,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             command = log_entry.command
             self.lock_server.commit_command(command)
-        # else:
-        #     print("heartbeat")
 
         return raft_pb2.Bool(value=True)
 

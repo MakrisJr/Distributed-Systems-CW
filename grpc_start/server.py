@@ -108,6 +108,12 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.CLIENT_NOT_INIT, seq=client_seq
             )
 
+    def increment_client_seq(self, client_id):
+        self.raft_server.send_append_entry_rpcs(
+            log.LogEntry(cs.IncrementClientSeqCommand(client_id))
+        )
+        self.clients[client_id]["seq"] += 1
+
     def client_init(self, request, context):
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
@@ -160,10 +166,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
             self.start_lock_timer()
 
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
-            self.clients[client_id]["seq"] += 1
+            self.increment_client_seq(client_id)
 
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
@@ -171,11 +174,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         elif self.lock_owner == request.client_id:
             print(f"Client {client_id} already has the lock.")
             self.start_lock_timer()
+            self.increment_client_seq(client_id)
 
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
-            self.clients[client_id]["seq"] += 1
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
@@ -184,10 +184,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         while True:
             if self.waiting_list[0] == request.client_id:
                 # essentially, head of waiting list is always current owner
-                self.raft_server.send_append_entry_rpcs(
-                    log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-                )
-                self.clients[client_id]["seq"] += 1
+                self.increment_client_seq(client_id)
+
                 print(f"LOCK OWNER: {self.lock_owner}")
                 # not sending rpcs to change lock holder here, as we're assuming this was already done
                 # in the lock_release that granted this client the lock
@@ -229,10 +227,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         if self.lock_owner == request.client_id:
             self.grant_lock_to_next_client()
             # resets timer, as this is a call from the current lock owner, proving that client is alive
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
-            self.clients[client_id]["seq"] += 1
+            self.increment_client_seq(client_id)
 
             self.start_lock_timer()
 
@@ -241,10 +236,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
         else:
-            self.raft_server.send_append_entry_rpcs(
-                log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-            )
-            self.clients[client_id]["seq"] += 1
+            self.increment_client_seq(client_id)
 
             # good idea to have this anyhow, as client could call release before ever calling acquire
             return lock_pb2.Response(
@@ -266,17 +258,16 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             f"Server: file_append received: {request.client_id}, {request.filename}, deque: {self.waiting_list}"
         )
 
-        self.clients[client_id]["seq"] += 1
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.IncrementClientSeqCommand(client_id))
-        )
+        self.increment_client_seq(client_id)
 
         if self.lock_owner == request.client_id:
             # resets timer, as this is a call from the current lock owner, proving that client is alive
             self.start_lock_timer()
 
             filename = request.filename
-            file_path = f"./files/{filename}"
+
+            file_path = self.file_folder + "/" + filename
+            # file_path = f"./files/{filename}"
 
             if os.path.isfile(file_path):
                 # add file append operation to appends queue
@@ -293,7 +284,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 )
             else:
                 if DEBUG:
-                    print(f"File {filename} error.")
+                    print(f"File {file_path} error.")
                 return lock_pb2.Response(
                     status=lock_pb2.Status.FILE_ERROR,
                     seq=self.clients[client_id]["seq"],
@@ -305,38 +296,21 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 status=lock_pb2.Status.LOCK_EXPIRED, seq=self.clients[client_id]["seq"]
             )
 
-    def keep_alive(self, request, context) -> lock_pb2.Response:
-        """Handle keep-alive messages from the client."""
-        if not (self.raft_server.is_leader()):
-            return lock_pb2.Response(leader=self.raft_server.leader)
-
-        client_id = request.client_id
-        if client_id == self.lock_owner:
-            print(f"Keep-alive received from client {client_id}. Resetting lock timer.")
-            self.start_lock_timer()
-            self.clients[client_id]["seq"] += 1
-            return lock_pb2.Response(
-                status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
-            )
-        else:
-            return lock_pb2.Response(
-                status=lock_pb2.Status.FAILURE, seq=self.clients[client_id]["seq"]
-            )
-
     def client_close(self, request, context):
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
 
         # get process id and remove from set
         client_id = request.rc
-        if client_id in self.clients:
-            while self.lock_owner == client_id:
-                time.sleep(0.01)
-            del self.clients[client_id]
 
         self.raft_server.send_append_entry_rpcs(
             log.LogEntry(cs.RemoveClientCommand(client_id))
         )
+
+        if client_id in self.clients:
+            while self.lock_owner == client_id:
+                time.sleep(0.01)
+            del self.clients[client_id]
 
         if DEBUG:
             print("client_close received: " + str(request.rc))
