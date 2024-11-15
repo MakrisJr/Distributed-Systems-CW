@@ -72,6 +72,17 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         if self.new_leader_timeout:
             self.new_leader_timeout.cancel()
 
+        heartbeat_thread = threading.Thread(target=self.send_heartbeats)
+        heartbeat_thread.start()
+
+    def send_heartbeats(self):
+        while self.state == RaftServerState.LEADER:
+            # print(f"Raft server {self.server_port}: Sending heartbeat.")
+            self.send_append_entry_rpcs(entry=None)
+            time.sleep(LEADER_HEARTBEAT_TIMEOUT)
+
+        exit()
+
     def follower_start(self):
         self.state = RaftServerState.FOLLOWER  # placeholder
         print(f"Raft server {self.server_port}: Initialized as follower.")
@@ -153,7 +164,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def serialise_log(self):
         """Converts self.log to json file"""
         with open(self.log_file_path, "w") as f:
-            json.dump(self.log, f)
+            json.dump([entry.toJson() for entry in self.log], f)
 
     def deserialise_log(self):
         """Reads from logfile into self.log"""
@@ -192,6 +203,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def send_append_entry_rpcs(self, entry: log.LogEntry):
         print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
+            print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
                 try:
