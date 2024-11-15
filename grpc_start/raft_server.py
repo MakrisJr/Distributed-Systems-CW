@@ -80,6 +80,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         while self.state == RaftServerState.LEADER:
             # print(f"Raft server {self.server_port}: Sending heartbeat.")
             self.send_append_entry_rpcs(entry=None)
+            # print(f"Raft server {self.server_port}: Sending heartbeat.")
             time.sleep(LEADER_HEARTBEAT_TIMEOUT)
 
         exit()
@@ -246,11 +247,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # execute command itself
             if entry:
                 self.log.append(entry)
-                print("before serialise log")
                 self.serialise_log()
-                print("after serialise log")
                 self.lock_server.commit_command(entry.command)
-                print("after commit command")
 
     # follower gets data from log file, gets any missing logs from leader and reconstructs state from completed log
     def initiate_recovery(self):

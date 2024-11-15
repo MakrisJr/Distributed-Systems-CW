@@ -201,15 +201,13 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def execute_appends(self):
         # execute all stashed changes to files - this also removes all append entries
+        print("execute_appends Called: self.appends: " + str(self.appends))
         while self.appends:
             file_path, bytes = self.appends.popleft()
 
             with open(file_path, "ab") as file:
                 file.write(bytes)
-
-        self.raft_server.send_append_entry_rpcs(
-            log.LogEntry(cs.ExecuteAppendsCommand())
-        )
+        print("server sends append entry, appends: " + str(self.appends))
 
     def lock_release(self, request, context) -> lock_pb2.Response:
         if not (self.raft_server.is_leader()):
@@ -234,7 +232,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
             self.start_lock_timer()
 
-            self.execute_appends()
+            self.raft_server.send_append_entry_rpcs(
+                log.LogEntry(cs.ExecuteAppendsCommand())
+            )
             return lock_pb2.Response(
                 status=lock_pb2.Status.SUCCESS, seq=self.clients[client_id]["seq"]
             )
@@ -390,8 +390,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.server.stop(0)
 
     def where_is_server(self, request, context):
-        ip = "0.0.0.0"
-        port = -1
+        leader = self.raft_server.leader
+        ip = self.ip
+        port = self.port
         return lock_pb2.ServerLocation(ip=ip, port=port)
 
 
