@@ -413,10 +413,12 @@ def reset_files(n=100):
     # they might or might not exist:
     # print("RESET FILE IS CALLED")
     for port in ["50051", "50052", "50053"]:
-        if os.path.exists(f"./files_{port}"):
-            for i in range(n):
-                with open(f"./files_{port}/file_{i}", "w") as f:
-                    f.write("")
+        if not os.path.exists(f"./files_{port}"):
+            os.makedirs(f"./files_{port}")
+
+        for i in range(n):
+            with open(f"./files_{port}/file_{i}", "w") as f:
+                f.write("")
 
     # delete files in ./log/*
     for file in os.listdir("./log"):
