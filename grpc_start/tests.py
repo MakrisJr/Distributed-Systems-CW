@@ -541,9 +541,7 @@ def replica_node_failures_fast_recovery():
                         )
                         exit(1)
                     if first_content is None:
-                        first_content = (
-                            content  # Initialize with the first valid content
-                        )
+                        first_content = content
                     elif content != first_content:
                         print(
                             f"Inconsistent content detected: {server.file_folder}/file_{i} contains {content}, expected {first_content}"
@@ -552,21 +550,312 @@ def replica_node_failures_fast_recovery():
 
             except FileNotFoundError:
                 print(f"File {server.file_folder}/file_{i} not found")
-                exit(1)  # Handle the missing file as a failure
-
-    print("All files passed with consistent content")
+                exit(1)
 
 
 def replica_node_failures_slow_recovery():
-    raise NotImplementedError
+    server1 = LockServer("localhost", 50051, True)
+    server2 = LockServer("localhost", 50052, False)
+    server3 = LockServer("localhost", 50053, False)
+
+    client1 = Client(1)
+    client2 = Client(2)
+
+    reset_files()
+
+    # Start server threads
+    thread1 = threading.Thread(target=server1.serve)
+    thread2 = threading.Thread(target=server2.serve)
+    thread3 = threading.Thread(target=server3.serve)
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+
+    print("Servers started")
+
+    time.sleep(5)
+
+    # Initialize clients
+    client1.RPC_client_init()
+    print("Client 1 initialized")
+    client2.RPC_client_init()
+    print("Client 2 initialized")
+
+    # Client 1 acquires lock and appends to all files
+    client1.RPC_lock_acquire()
+    print("Client 1 acquired lock")
+    client1.RPC_append_file("1", "A")
+    print("Client 1 appended 'A' to file 1")
+    client1.RPC_append_file("2", "A")
+    print("Client 1 appended 'A' to file 2")
+
+    # Simulate Server 2 failure
+    server2.stop()
+    print("Server 2 stopped")
+    time.sleep(10)
+
+    # Continue appending with Server 2 down
+    client1.RPC_append_file("3", "A")
+    print("Client 1 appended 'A' to file 3")
+    client1.RPC_lock_release()
+    print("Client 1 released lock")
+
+    # Restart Server 2
+    thread2 = threading.Thread(target=server2.serve)
+    thread2.start()
+    print("Server 2 restarting...")
+    time.sleep(5)  # Allow Server 2 to fully recover
+
+    # Client 2 acquires lock and appends to all files
+    client2.RPC_lock_acquire()
+    print("Client 2 acquired lock")
+    client2.RPC_append_file("1", "B")
+    print("Client 2 appended 'B' to file 1")
+    client2.RPC_append_file("2", "B")
+    print("Client 2 appended 'B' to file 2")
+    client2.RPC_append_file("3", "B")
+    print("Client 2 appended 'B' to file 3")
+    client2.RPC_lock_release()
+    print("Client 2 released lock")
+
+    # Stop all servers
+    server1.stop()
+    server2.stop()
+    server3.stop()
+
+    print("Servers stopped")
+
+    servers = [server1, server2, server3]
+
+    print("Checking files")
+    expected = set(["AB", "BA"])
+    first_content = None
+
+    for server in servers:
+        print(f"Checking files in {server.file_folder}")
+        for i in range(1, 4):
+            try:
+                with open(f"{server.file_folder}/file_{i}", "r") as file:
+                    content = file.read()
+                    if content not in expected:
+                        print(
+                            f"Test failed for {server.file_folder}/file_{i}: {content} (unexpected content)"
+                        )
+                        exit(1)
+                    if first_content is None:
+                        first_content = content
+                    elif content != first_content:
+                        print(
+                            f"Inconsistent content detected: {server.file_folder}/file_{i} contains {content}, expected {first_content}"
+                        )
+                        exit(1)
+
+            except FileNotFoundError:
+                print(f"File {server.file_folder}/file_{i} not found")
+                exit(1)
 
 
 def primary_node_failures_slow_recovery_outside_critical_section():
-    raise NotImplementedError
+    server1 = LockServer("localhost", 50051, True)
+    server2 = LockServer("localhost", 50052, False)
+    server3 = LockServer("localhost", 50053, False)
+
+    client1 = Client(1)
+    client2 = Client(2)
+    client3 = Client(3)
+
+    reset_files()
+
+    # Start server threads
+    thread1 = threading.Thread(target=server1.serve)
+    thread2 = threading.Thread(target=server2.serve)
+    thread3 = threading.Thread(target=server3.serve)
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+
+    print("Servers started")
+
+    time.sleep(5)
+
+    # Initialize clients
+    client1.RPC_client_init()
+    print("Client 1 initialized")
+    client2.RPC_client_init()
+    print("Client 2 initialized")
+    client3.RPC_client_init()
+    print("Client 3 initialized")
+
+    # Client 1 acquires lock and appends to one file 5 times
+    client1.RPC_lock_acquire()
+    print("Client 1 acquired lock")
+    client1.RPC_append_file("1", "A")
+    client1.RPC_append_file("1", "A")
+    client1.RPC_append_file("1", "A")
+    client1.RPC_append_file("1", "A")
+    client1.RPC_append_file("1", "A")
+    client1.RPC_lock_release()
+    print("Client 1 released lock")
+
+    # Simulate Server 1 failure
+    server1.stop()
+    print("Server 1 stopped")
+    time.sleep(2)
+
+    # Client 2 acquires lock and appends to one file 5 times
+    client2.RPC_lock_acquire()
+    print("Client 2 acquired lock")
+    client2.RPC_append_file("1", "B")
+    client2.RPC_append_file("1", "B")
+    client2.RPC_append_file("1", "B")
+    client2.RPC_append_file("1", "B")
+    client2.RPC_append_file("1", "B")
+    client2.RPC_lock_release()
+
+    # Client 3 acquires lock and appends to one file 5 times
+    client3.RPC_lock_acquire()
+    print("Client 3 acquired lock")
+    client3.RPC_append_file("1", "C")
+    client3.RPC_append_file("1", "C")
+    client3.RPC_append_file("1", "C")
+    client3.RPC_append_file("1", "C")
+    client3.RPC_append_file("1", "C")
+    client3.RPC_lock_release()
+
+    # Restart Server 1
+    thread1 = threading.Thread(target=server1.serve)
+    thread1.start()
+    print("Server 1 restarting...")
+    time.sleep(5)  # Allow Server 1 to fully recover
+
+    # Stop all servers
+    server1.stop()
+    server2.stop()
+    server3.stop()
+
+    print("Servers stopped")
+
+    servers = [server1, server2, server3]
+
+    print("Checking files")
+    # expect file 1 on every server to contain "AAAAABBBBBCCCCC"
+    expected = "AAAAABBBBBCCCCC"
+    for server in servers:
+        print(f"Checking files in {server.file_folder}")
+        try:
+            with open(f"{server.file_folder}/file_1", "r") as file:
+                content = file.read()
+                if content != expected:
+                    print(
+                        f"Test failed for {server.file_folder}/file_1: {content} (unexpected content)"
+                    )
+                    exit(1)
+        except FileNotFoundError:
+            print(f"File {server.file_folder}/file_1 not found")
+            exit(1)
 
 
 def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
-    raise NotImplementedError
+    server1 = LockServer("localhost", 50051, True)
+    server2 = LockServer("localhost", 50052, False)
+    server3 = LockServer("localhost", 50053, False)
+
+    client1 = Client(1)
+    client2 = Client(2)
+    client3 = Client(3)
+
+    reset_files()
+
+    # Start server threads
+    thread1 = threading.Thread(target=server1.serve)
+    thread2 = threading.Thread(target=server2.serve)
+    thread3 = threading.Thread(target=server3.serve)
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+
+    print("Servers started")
+
+    time.sleep(5)
+
+    # Initialize clients
+    client1.RPC_client_init()
+    print("Client 1 initialized")
+    client2.RPC_client_init()
+    print("Client 2 initialized")
+    client3.RPC_client_init()
+    print("Client 3 initialized")
+
+    # Client 1 acquires lock and appends to one file 20 times
+    client1.RPC_lock_acquire()
+    print("Client 1 acquired lock")
+    for _ in range(20):
+        client1.RPC_append_file("1", "A")
+    client1.RPC_lock_release()
+    print("Client 1 released lock")
+
+    # Simulate Server 1 failure
+    server1.stop()
+    print("Server 1 stopped")
+    time.sleep(10)
+
+    # Client 2 acquires lock and appends to one file 20 times
+    client2.RPC_lock_acquire()
+    print("Client 2 acquired lock")
+    for _ in range(10):
+        client2.RPC_append_file("1", "B")
+
+    # Simulate Server 1 failure
+    server1.stop()
+    print("Server 1 stopped")
+    time.sleep(2)
+
+    for _ in range(10):
+        client2.RPC_append_file("1", "B")
+
+    client2.RPC_lock_release()
+
+    # Client 3 acquires lock and appends to one file 20 times
+    client3.RPC_lock_acquire()
+    print("Client 3 acquired lock")
+    for _ in range(20):
+        client3.RPC_append_file("1", "C")
+    client3.RPC_lock_release()
+
+    # Restart Server 1
+    thread1 = threading.Thread(target=server1.serve)
+    thread1.start()
+    print("Server 1 restarting...")
+    time.sleep(10)  # Allow Server 1 to fully recover
+
+    # Stop all servers
+    server1.stop()
+    server2.stop()
+    server3.stop()
+
+    print("Servers stopped")
+
+    servers = [server1, server2, server3]
+
+    print("Checking files")
+    # expect file 1 on every server to contain "A" * 20 + "B" * 20 + "C" * 20
+    expected = "A" * 20 + "B" * 20 + "C" * 20
+    for server in servers:
+        print(f"Checking files in {server.file_folder}")
+        try:
+            with open(f"{server.file_folder}/file_1", "r") as file:
+                content = file.read()
+                if content != expected:
+                    print(
+                        f"Test failed for {server.file_folder}/file_1: {content} (unexpected content)"
+                    )
+                    exit(1)
+        except FileNotFoundError:
+            print(f"File {server.file_folder}/file_1 not found")
+            exit(1)
 
 
 def primary_and_replica_node_failures():
