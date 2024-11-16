@@ -312,5 +312,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.raft_servers.append(address)
         return raft_pb2.Empty()
 
+        return raft_pb2.Empty()
+
     def is_leader(self):
         return self.state == RaftServerState.LEADER
