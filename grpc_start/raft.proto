@@ -73,4 +73,5 @@ service RaftService {
     rpc append_entry(AppendArgs) returns (Bool);
     rpc where_is_leader(Empty) returns (String);
     rpc recover_logs(Int) returns (RecoveryResponse);
+    rpc subscribe_to_leader(String) returns (Empty);
 }

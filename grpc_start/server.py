@@ -277,7 +277,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 # add file append operation to appends queue
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(
-                        cs.AddAppendCommand(filename=file_path, content=request.content)
+                        cs.AddAppendCommand(filename=filename, content=request.content)
                     )
                 )
                 self.appends.append((file_path, request.content))
@@ -345,7 +345,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             self.waiting_list.append(self.lock_owner)
 
         elif isinstance(command, cs.AddAppendCommand):
-            self.appends.append((command.filename, command.content))
+            self.appends.append(
+                (self.file_folder + "/" + command.filename, command.content)
+            )
             print("QUEUED APPENDS: " + str(self.appends))
 
         elif isinstance(command, cs.ExecuteAppendsCommand):
@@ -372,12 +374,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.server.add_insecure_port(f"[::]:{self.port}")
         self.server.start()
+        print("Initializing raft server")
         self.raft_server.serve()
         print("Server started, listening on ", self.port)
         time.sleep(5)
 
     def stop(self):
         self.lock_timer.cancel()
+        if self.raft_server.new_leader_timeout:
+            self.raft_server.new_leader_timeout.cancel()
         self.server.stop(0)
 
     def where_is_server(self, request, context):
