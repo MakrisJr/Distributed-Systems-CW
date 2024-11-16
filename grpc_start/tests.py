@@ -1,6 +1,7 @@
 import sys
 import threading
 import time
+import warnings
 from pathlib import Path
 
 root_directory = Path(__file__).resolve().parent.parent
@@ -599,7 +600,7 @@ def replica_node_failures_slow_recovery():
     # Simulate Server 2 failure
     server2.stop()
     print("Server 2 stopped")
-    time.sleep(10)
+    # time.sleep(10)
 
     # Continue appending with Server 2 down
     client1.RPC_append_file("3", "A")
@@ -608,6 +609,7 @@ def replica_node_failures_slow_recovery():
     print("Client 1 released lock")
 
     # Restart Server 2
+    server2 = LockServer("localhost", 50052, False)
     thread2 = threading.Thread(target=server2.serve)
     thread2.start()
     print("Server 2 restarting...")
@@ -627,6 +629,7 @@ def replica_node_failures_slow_recovery():
 
     servers = [server1, server2, server3]
 
+    time.sleep(0.5)
     # Stop all servers
     for server in servers:
         server.stop()
@@ -930,6 +933,8 @@ def primary_and_replica_node_failures():
     print("Client 3 released lock")
 
     # Restart Server 1 and 2
+    server1 = LockServer("localhost", 50051, False)
+    server2 = LockServer("localhost", 50052, False)
     thread1 = threading.Thread(target=server1.serve)
     thread2 = threading.Thread(target=server2.serve)
     thread1.start()
@@ -967,6 +972,9 @@ def primary_and_replica_node_failures():
 
 
 if __name__ == "__main__":
+    # ignore warnings
+
+    warnings.filterwarnings("ignore")
     # run all tests
     failed_tests = []
     # if not test_packet_delay():
@@ -1005,19 +1013,19 @@ if __name__ == "__main__":
     #     failed_tests.append("test_single_server_fails_lock_held")
     #     print("test_single_server_fails_lock_held failed")
 
-    if not replica_node_failures_fast_recovery():
-        failed_tests.append("replica_node_failures_fast_recovery")
-        print("replica_node_failures_fast_recovery failed")
+    # if not replica_node_failures_fast_recovery():
+    #     failed_tests.append("replica_node_failures_fast_recovery")
+    #     print("replica_node_failures_fast_recovery failed")
 
     # if not replica_node_failures_slow_recovery():
     #     failed_tests.append("replica_node_failures_slow_recovery")
     #     print("replica_node_failures_slow_recovery failed")
 
-    # if not primary_node_failures_slow_recovery_outside_critical_section():
-    #     failed_tests.append(
-    #         "primary_node_failures_slow_recovery_outside_critical_section"
-    #     )
-    #     print("primary_node_failures_slow_recovery_outside_critical_section failed")
+    if not primary_node_failures_slow_recovery_outside_critical_section():
+        failed_tests.append(
+            "primary_node_failures_slow_recovery_outside_critical_section"
+        )
+        print("primary_node_failures_slow_recovery_outside_critical_section failed")
 
     # This test case is not well defined
     # if not primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():

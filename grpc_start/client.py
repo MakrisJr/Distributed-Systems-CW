@@ -13,7 +13,7 @@ import grpc  # noqa: E402
 from grpc_start import lock_pb2, lock_pb2_grpc  # noqa: E402
 
 RETRY_LIMIT = 3
-RETRY_DELAY = 2
+RETRY_DELAY = 3
 DEBUG = True
 POSSIBLE_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 
