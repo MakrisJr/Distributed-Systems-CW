@@ -29,7 +29,7 @@ MIN_LEADER_CHANGE_TIMEOUT = 0.5
 MAX_LEADER_CHANGE_TIMEOUT = 2
 
 RETRY_LIMIT = 3
-RETRY_DELAY = 2
+RETRY_DELAY = 1
 
 
 class RaftServer(raft_pb2_grpc.RaftServiceServicer):
@@ -46,6 +46,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
         self.leader = None
+
+        self.heartbeat_thread = None
 
         self.is_leader_debug = is_leader
         self.pause = False
@@ -73,6 +75,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.leader = f"{self.server_ip}:{self.server_port}"
         self.raft_servers = RAFT_SERVERS.copy()
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
+        self.establish_channels_stubs()
         self.send_append_entry_rpcs(
             entry=None
         )  # TODO send heartbeats to all other servers so they know you're leader
@@ -80,9 +83,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         if self.new_leader_timeout:
             self.new_leader_timeout.cancel()
 
-        heartbeat_thread = threading.Thread(target=self.send_heartbeats)
-        heartbeat_thread.daemon = True
-        heartbeat_thread.start()
+        self.heartbeat_thread = threading.Thread(target=self.send_heartbeats)
+        self.heartbeat_thread.daemon = True
+        self.heartbeat_thread.start()
 
     def send_heartbeats(self):
         while self.state == RaftServerState.LEADER:
@@ -104,14 +107,14 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.stubs = {}
         active_servers = []
         for raft_node in self.raft_servers:
-            print(f"{self.server_port}: Connecting to {raft_node}")
+            # print(f"{self.server_port}: Connecting to {raft_node}")
             try:
                 channel = grpc.insecure_channel(raft_node)
                 grpc.channel_ready_future(channel).result(timeout=1)
                 stub = raft_pb2_grpc.RaftServiceStub(channel)
                 self.channels[raft_node] = channel
                 self.stubs[raft_node] = stub
-                print(f"{self.server_port}: Connected to {raft_node}")
+                # print(f"{self.server_port}: Connected to {raft_node}")
                 # check if node is alive, if not remove it from the list
                 active_servers.append(raft_node)
             except grpc.FutureTimeoutError:
@@ -176,6 +179,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def become_new_leader(self):
         """The follower that detects the absence of the leader first becomes the new leader"""
+        print(f"RAFT {self.port}: New leader timer expired.")
         if self.state == RaftServerState.FOLLOWER:
             self.leader_start()
 
@@ -227,7 +231,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                         while self.pause:
                             time.sleep(0.1)
                         print(f"Sending append_entry {entry.command} to {raft_node}")
-                        print(f"Type of command: {type(entry.command)}")
+                        # print(f"Type of command: {type(entry.command)}")
                         self.retry_rpc_call(
                             self.stubs[raft_node].append_entry,
                             raft_pb2.AppendArgs(
@@ -244,9 +248,9 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                             )
                         )
 
-                except grpc.RpcError as e:
+                except grpc.RpcError:
                     print(
-                        f"Raft server {self.server_port}: Error sending append_entry RPC to {raft_node} KICKED OUT while appending {entry}: {e}"
+                        f"Raft server {self.server_port}: Error sending append_entry RPC to {raft_node} KICKED OUT while appending {entry}"
                     )
                     # remove node from raft_servers
                     self.raft_servers.remove(raft_node)
@@ -277,14 +281,14 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.lock_server.reset_own_files()
         for entry in self.log:
             self.lock_server.commit_command(entry.command)
+        if not self.leader == f"{self.server_ip}:{self.server_port}":
+            self.retry_rpc_call(
+                self.stubs[self.leader].subscribe_to_leader,
+                raft_pb2.String(value=f"{self.server_ip}:{self.server_port}"),
+            )
 
-        self.retry_rpc_call(
-            self.stubs[self.leader].subscribe_to_leader,
-            raft_pb2.String(value=f"{self.server_ip}:{self.server_port}"),
-        )
-
-        # now that this is an up-to-date follower, allow it to potentially become the leader
-        self.start_new_leader_timer()
+            # now that this is an up-to-date follower, allow it to potentially become the leader
+            self.start_new_leader_timer()
 
     # leader helpfully returns missing logs to idiot follower who had the temerity to die
     def recover_logs(self, request, context):
