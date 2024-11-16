@@ -733,7 +733,7 @@ def primary_node_failures_slow_recovery_outside_critical_section():
     time.sleep(5)  # Allow Server 1 to fully recover
 
     servers = [server1, server2, server3]
-
+    print("Stopping servers")
     # Stop all servers
     for server in servers:
         server.stop()

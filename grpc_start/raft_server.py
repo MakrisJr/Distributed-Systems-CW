@@ -88,6 +88,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.heartbeat_thread = threading.Thread(target=self.send_heartbeats)
         # self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
+        self.lock_server.start_lock_timer()
 
     def send_heartbeats(self):
         while self.state == RaftServerState.LEADER:
@@ -217,8 +218,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             command = log_entry.command
             self.lock_server.commit_command(command)
-        else:
-            print(f"Raft {self.server_port} Received heartbeat.")
+        # else:
+        # print(f"Raft {self.server_port} Received heartbeat.")
 
         return raft_pb2.Bool(value=True)
 

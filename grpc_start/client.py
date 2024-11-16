@@ -34,6 +34,10 @@ def status_str(x):
         raise Exception("Not a valid status integer")
 
 
+class LeaderChangeException(Exception):
+    pass
+
+
 class Client:
     def __init__(self, id):
         self.client_id = id
@@ -75,29 +79,46 @@ class Client:
             )
             return False
 
-    def retry_rpc_call(self, rpc_func, *args, **kwargs):
+    def retry_rpc_call(self, func_type, *args, **kwargs):
         for attempt in range(RETRY_LIMIT):
+            match func_type:
+                case "lock_acquire":
+                    rpc_func = self.stub.lock_acquire
+                case "file_append":
+                    rpc_func = self.stub.file_append
+                case "lock_release":
+                    rpc_func = self.stub.lock_release
+                case "client_close":
+                    rpc_func = self.stub.client_close
+
             try:
                 response = rpc_func(*args, **kwargs)
-                # if len(str(response.leader)):
-                #     # update channel and stub info to point to new leader
-                #     leader_str = str(response.leader)
-
-                #     self.server_ip = leader_str.split(":")[0]
-                #     self.server_port = leader_str.split(":")[1]
-                #     self.channel = grpc.insecure_channel(
-                #         f"{self.server_ip}:{self.server_port}"
-                #     )
-                #     self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+                if len(str(response.leader)):
+                    raise LeaderChangeException
                 return response
             except grpc.RpcError as e:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                rpc_func_name = rpc_func.__name__
-                rpc_func = getattr(self.stub, rpc_func_name)
                 self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
+
+            except LeaderChangeException:
+                # successful connection, but it was a follower instead
+
+                # update channel and stub info to point to new leader
+                leader_str = str(response.leader)
+
+                self.server_ip = leader_str.split(":")[0]
+                self.server_port = leader_str.split(":")[1]
+                self.channel = grpc.insecure_channel(
+                    f"{self.server_ip}:{self.server_port}"
+                )
+                self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+
+                time.sleep(RETRY_DELAY)
+
+            print(f"Client {self.client_id}: Retrying...")
 
         print(
             f"Client {self.client_id}: RETRY_RPC_CALL: Failed to receive response after retries."
@@ -107,7 +128,7 @@ class Client:
     def RPC_lock_acquire(self):
         print("CALLED RPC_LOCK_ACQUIRE")
         response = self.retry_rpc_call(
-            self.stub.lock_acquire,
+            "lock_acquire",
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
 
@@ -149,7 +170,7 @@ class Client:
             return False
 
         response = self.retry_rpc_call(
-            self.stub.file_append,
+            "file_append",
             lock_pb2.file_args(
                 filename=f"file_{file_number}",
                 content=f"{text}".encode(),
@@ -205,7 +226,7 @@ class Client:
     def RPC_lock_release(self):
         print("CALLED RPC_LOCK_RELEASE")
         response = self.retry_rpc_call(
-            self.stub.lock_release,
+            "lock_release",
             lock_pb2.lock_args(client_id=self.client_id, seq=self.seq),
         )
 
@@ -241,7 +262,7 @@ class Client:
     def RPC_client_close(self):
         print("CALLED RPC_CLIENT_CLOSE")
         response = self.retry_rpc_call(
-            self.stub.client_close, lock_pb2.Int(rc=self.client_id, seq=self.seq)
+            "client_close", lock_pb2.Int(rc=self.client_id, seq=self.seq)
         )
 
         if response and len(str(response.leader)):
@@ -309,12 +330,12 @@ class Client:
         for i in range(seq, self.seq):
             if self.request_history[i][0] == "lock_acquire":
                 response = self.retry_rpc_call(
-                    self.stub.lock_acquire,
+                    "lock_acquire",
                     lock_pb2.lock_args(client_id=self.client_id, seq=i),
                 )
             elif self.request_history[i][0] == "file_append":
                 response = self.retry_rpc_call(
-                    self.stub.file_append,
+                    "file_append",
                     lock_pb2.file_args(
                         filename=f"file_{self.request_history[i][1]}",
                         content=f"{self.request_history[i][2]}".encode(),
@@ -324,7 +345,7 @@ class Client:
                 )
             elif self.request_history[i] == "lock_release":
                 response = self.retry_rpc_call(
-                    self.stub.lock_release,
+                    "lock_release",
                     lock_pb2.lock_args(client_id=self.client_id, seq=i),
                 )
             else:
