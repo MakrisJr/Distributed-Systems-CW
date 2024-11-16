@@ -422,6 +422,8 @@ def reset_files(n=100):
                 f.write("")
 
     # delete files in ./log/*
+    if not os.path.exists("./log"):
+        os.makedirs("./log")
     for file in os.listdir("./log"):
         print(file)
         os.remove(os.path.join("./log", file))
