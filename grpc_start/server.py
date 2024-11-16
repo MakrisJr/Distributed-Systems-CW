@@ -383,12 +383,14 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.lock_timer.cancel()
         if self.raft_server.new_leader_timeout:
             self.raft_server.new_leader_timeout.cancel()
+        self.raft_server.state = raft_server.RaftServerState.DEAD
         self.server.stop(0)
 
     def where_is_server(self, request, context):
         leader = self.raft_server.leader
-        ip = self.ip
-        port = self.port
+        print(f"Server {self.port} Leader is {leader}")
+        ip = leader.split(":")[0]
+        port = leader.split(":")[1]
         return lock_pb2.ServerLocation(ip=ip, port=port)
 
     def reset_own_files(self):

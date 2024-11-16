@@ -94,7 +94,7 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                # self.RPC_where_is_server()
+                self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
         print(
@@ -277,6 +277,11 @@ class Client:
     def RPC_where_is_server(self):
         for server in POSSIBLE_SERVERS:
             try:
+                self.channel = grpc.insecure_channel(
+                    f"{self.server_ip}:{self.server_port}"
+                )
+                self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+
                 response = self.stub.where_is_server(lock_pb2.Int(rc=self.client_id))
                 if response.port != -1:
                     self.server_ip = response.ip
@@ -289,10 +294,8 @@ class Client:
                         f"Client {self.client_id}: Server found at {response.ip}:{response.port}"
                     )
                     return True
-            except grpc.RpcError as e:
-                print(
-                    f"Client {self.client_id}: RPC call where_is_server failed with error: {e}"
-                )
+            except grpc.RpcError:
+                print(f"Client {self.client_id}: Could not contact server {server}.")
                 continue  # try next server
         return False
 
