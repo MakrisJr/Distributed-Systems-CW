@@ -79,21 +79,23 @@ class Client:
         for attempt in range(RETRY_LIMIT):
             try:
                 response = rpc_func(*args, **kwargs)
-                if len(str(response.leader)):
-                    # update channel and stub info to point to new leader
-                    leader_str = str(response.leader)
+                # if len(str(response.leader)):
+                #     # update channel and stub info to point to new leader
+                #     leader_str = str(response.leader)
 
-                    self.server_ip = leader_str.split(":")[0]
-                    self.server_port = leader_str.split(":")[1]
-                    self.channel = grpc.insecure_channel(
-                        f"{self.server_ip}:{self.server_port}"
-                    )
-                    self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
+                #     self.server_ip = leader_str.split(":")[0]
+                #     self.server_port = leader_str.split(":")[1]
+                #     self.channel = grpc.insecure_channel(
+                #         f"{self.server_ip}:{self.server_port}"
+                #     )
+                #     self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
                 return response
             except grpc.RpcError as e:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
+                rpc_func_name = rpc_func.__name__
+                rpc_func = getattr(self.stub, rpc_func_name)
                 self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
@@ -275,10 +277,11 @@ class Client:
             return False
 
     def RPC_where_is_server(self):
+        print(f"Calling where_is_server for client {self.client_id}")
         for server in POSSIBLE_SERVERS:
             try:
                 self.channel = grpc.insecure_channel(
-                    f"{self.server_ip}:{self.server_port}"
+                    f"{server}"  # f"{self.server_ip}:{self.server_port}"
                 )
                 self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
 
@@ -286,16 +289,18 @@ class Client:
                 if response.port != -1:
                     self.server_ip = response.ip
                     self.server_port = response.port
+                    print("Server found at " + response.ip + ":" + str(response.port))
                     self.channel = grpc.insecure_channel(
                         f"{self.server_ip}:{self.server_port}"
                     )
                     self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
                     print(
-                        f"Client {self.client_id}: Server found at {response.ip}:{response.port}"
+                        f"Client {self.client_id}: Server found at {self.server_ip}:{self.server_port}"
                     )
                     return True
-            except grpc.RpcError:
+            except grpc.RpcError as e:
                 print(f"Client {self.client_id}: Could not contact server {server}.")
+                print(e)
                 continue  # try next server
         return False
 
