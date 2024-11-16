@@ -543,18 +543,20 @@ def replica_node_failures_fast_recovery():
                         print(
                             f"Test failed for {server.file_folder}/file_{i}: {content} (unexpected content)"
                         )
-                        exit(1)
+                        return False
                     if first_content is None:
                         first_content = content
                     elif content != first_content:
                         print(
                             f"Inconsistent content detected: {server.file_folder}/file_{i} contains {content}, expected {first_content}"
                         )
-                        exit(1)
+                        return False
 
             except FileNotFoundError:
                 print(f"File {server.file_folder}/file_{i} not found")
-                exit(1)
+                return False
+
+    return True
 
 
 def replica_node_failures_slow_recovery():
@@ -645,18 +647,20 @@ def replica_node_failures_slow_recovery():
                         print(
                             f"Test failed for {server.file_folder}/file_{i}: {content} (unexpected content)"
                         )
-                        exit(1)
+                        return False
                     if first_content is None:
                         first_content = content
                     elif content != first_content:
                         print(
                             f"Inconsistent content detected: {server.file_folder}/file_{i} contains {content}, expected {first_content}"
                         )
-                        exit(1)
+                        return False
 
             except FileNotFoundError:
                 print(f"File {server.file_folder}/file_{i} not found")
-                exit(1)
+                return False
+
+    return True
 
 
 def primary_node_failures_slow_recovery_outside_critical_section():
@@ -744,10 +748,12 @@ def primary_node_failures_slow_recovery_outside_critical_section():
                     print(
                         f"Test failed for {server.file_folder}/file_1: {content} (unexpected content)"
                     )
-                    exit(1)
+                    return False
         except FileNotFoundError:
             print(f"File {server.file_folder}/file_1 not found")
-            exit(1)
+            return False
+
+    return True
 
 
 def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
@@ -844,10 +850,12 @@ def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_at
                     print(
                         f"Test failed for {server.file_folder}/file_1: {content} (unexpected content)"
                     )
-                    exit(1)
+                    return False
         except FileNotFoundError:
             print(f"File {server.file_folder}/file_1 not found")
-            exit(1)
+            return False
+
+    return True
 
 
 # Very unsure about this test - weird behavior
@@ -950,10 +958,12 @@ def primary_and_replica_node_failures():
                         print(
                             f"Test failed for {server.file_folder}/file_{i}: {content} (unexpected content)"
                         )
-                        exit(1)
+                        return False
             except FileNotFoundError:
                 print(f"File {server.file_folder}/file_{i} not found")
-                exit(1)
+                return False
+
+    return True
 
 
 if __name__ == "__main__":
