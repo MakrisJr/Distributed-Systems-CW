@@ -45,10 +45,11 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.raft_servers = RAFT_SERVERS.copy()
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
+        self.leader = None
+
+    def serve(self):
         self.establish_channels_stubs()
         print("Servers available: ", self.raft_servers)
-
-        self.leader = None
 
         if os.path.exists(self.log_file_path):
             # assuming that if log file exists, that means this server died and came back
@@ -57,10 +58,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # create path and file if they dont exist
             os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
             open(self.log_file_path, "w").close()
-            if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
-                self.leader_start()
-            else:
-                self.follower_start()
+            # if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
+            #     self.leader_start()
+            # else:
+            self.follower_start()
 
     def leader_start(self):
         # called when first coming into power
@@ -90,14 +91,15 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     def follower_start(self):
         self.state = RaftServerState.FOLLOWER  # placeholder
         print(f"Raft server {self.server_port}: Initialized as follower.")
-
         self.start_new_leader_timer()
+        self.find_leader()
 
     def establish_channels_stubs(self):
         self.channels = {}
         self.stubs = {}
         active_servers = []
         for raft_node in self.raft_servers:
+            print(f"{self.server_port}: Connecting to {raft_node}")
             try:
                 channel = grpc.insecure_channel(raft_node)
                 grpc.channel_ready_future(channel).result(timeout=1)
@@ -211,12 +213,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     # this is where this server calls the append_entries rpc on other servers
     def send_append_entry_rpcs(self, entry: log.LogEntry):
-        # print(f"Raft server {self.server_port}: Appending entry {entry}")
         if self.state == RaftServerState.LEADER:
-            # print(f"Leader is {self.server_port}, {self.leader}")
             # TODO: make asynchronous?
             for raft_node in self.raft_servers:
-                print(f"Sending append_entry to {raft_node}")
+                # print(f"Sending append_entry to {raft_node}")
                 try:
                     if entry:
                         print(f"Sending append_entry {entry.command} to {raft_node}")
