@@ -274,7 +274,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
                 for log_grpc in missing_log_grpcs.log:
                     self.log.append(log.log_entry_grpc_to_object(log_grpc))
 
-        server.reset_files()
+        self.lock_server.reset_own_files()
         for entry in self.log:
             self.lock_server.commit_command(entry.command)
 
@@ -301,7 +301,6 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def subscribe_to_leader(self, request, context):
         address = request.value
-        self.raft_servers.append(address)
         print(f"Leader {self.server_port}: Added {address} to raft servers.")
         channel = grpc.insecure_channel(address)
         grpc.channel_ready_future(channel).result(timeout=1)
@@ -310,6 +309,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.stubs[address] = stub
 
         self.pause = False
+        self.raft_servers.append(address)
+        return raft_pb2.Empty()
 
     def is_leader(self):
         return self.state == RaftServerState.LEADER

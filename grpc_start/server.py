@@ -391,6 +391,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         port = self.port
         return lock_pb2.ServerLocation(ip=ip, port=port)
 
+    def reset_own_files(self):
+        for i in range(100):
+            with open(f"./files_{self.port}/file_{i}", "w") as f:
+                f.write("")
+
 
 def create_files(n=100):
     # needs to be modified to account for multiple servers
