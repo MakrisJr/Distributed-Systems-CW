@@ -382,9 +382,13 @@ def test_raft():
 
     time.sleep(15)
 
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    servers = [server1, server2, server3]
+
+    # Stop all servers
+    for server in servers:
+        server.stop()
+
+    print("Servers stopped")
 
     return True
 
@@ -516,14 +520,13 @@ def replica_node_failures_fast_recovery():
     client2.RPC_lock_release()
     print("Client 2 released lock")
 
+    servers = [server1, server2, server3]
+
     # Stop all servers
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    for server in servers:
+        server.stop()
 
     print("Servers stopped")
-
-    servers = [server1, server2, server3]
 
     print("Checking files")
     expected = set(["AB", "BA"])
@@ -619,14 +622,13 @@ def replica_node_failures_slow_recovery():
     client2.RPC_lock_release()
     print("Client 2 released lock")
 
+    servers = [server1, server2, server3]
+
     # Stop all servers
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    for server in servers:
+        server.stop()
 
     print("Servers stopped")
-
-    servers = [server1, server2, server3]
 
     print("Checking files")
     expected = set(["AB", "BA"])
@@ -691,11 +693,8 @@ def primary_node_failures_slow_recovery_outside_critical_section():
     # Client 1 acquires lock and appends to one file 5 times
     client1.RPC_lock_acquire()
     print("Client 1 acquired lock")
-    client1.RPC_append_file("1", "A")
-    client1.RPC_append_file("1", "A")
-    client1.RPC_append_file("1", "A")
-    client1.RPC_append_file("1", "A")
-    client1.RPC_append_file("1", "A")
+    for _ in range(5):
+        client1.RPC_append_file("1", "A")
     client1.RPC_lock_release()
     print("Client 1 released lock")
 
@@ -707,21 +706,15 @@ def primary_node_failures_slow_recovery_outside_critical_section():
     # Client 2 acquires lock and appends to one file 5 times
     client2.RPC_lock_acquire()
     print("Client 2 acquired lock")
-    client2.RPC_append_file("1", "B")
-    client2.RPC_append_file("1", "B")
-    client2.RPC_append_file("1", "B")
-    client2.RPC_append_file("1", "B")
-    client2.RPC_append_file("1", "B")
+    for _ in range(5):
+        client2.RPC_append_file("1", "B")
     client2.RPC_lock_release()
 
     # Client 3 acquires lock and appends to one file 5 times
     client3.RPC_lock_acquire()
     print("Client 3 acquired lock")
-    client3.RPC_append_file("1", "C")
-    client3.RPC_append_file("1", "C")
-    client3.RPC_append_file("1", "C")
-    client3.RPC_append_file("1", "C")
-    client3.RPC_append_file("1", "C")
+    for _ in range(5):
+        client3.RPC_append_file("1", "C")
     client3.RPC_lock_release()
 
     # Restart Server 1
@@ -730,14 +723,13 @@ def primary_node_failures_slow_recovery_outside_critical_section():
     print("Server 1 restarting...")
     time.sleep(5)  # Allow Server 1 to fully recover
 
+    servers = [server1, server2, server3]
+
     # Stop all servers
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    for server in servers:
+        server.stop()
 
     print("Servers stopped")
-
-    servers = [server1, server2, server3]
 
     print("Checking files")
     # expect file 1 on every server to contain "AAAAABBBBBCCCCC"
@@ -831,14 +823,13 @@ def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_at
     print("Server 1 restarting...")
     time.sleep(10)  # Allow Server 1 to fully recover
 
+    servers = [server1, server2, server3]
+
     # Stop all servers
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    for server in servers:
+        server.stop()
 
     print("Servers stopped")
-
-    servers = [server1, server2, server3]
 
     print("Checking files")
     # expect file 1 on every server to contain "A" * 20 + "B" * 20 + "C" * 20
@@ -937,14 +928,13 @@ def primary_and_replica_node_failures():
     print("Server 1 and 2 restarting...")
     time.sleep(10)  # Allow Server 1 and 2 to fully recover
 
+    servers = [server1, server2, server3]
+
     # Stop all servers
-    server1.stop()
-    server2.stop()
-    server3.stop()
+    for server in servers:
+        server.stop()
 
     print("Servers stopped")
-
-    servers = [server1, server2, server3]
 
     print("Checking files")
     # expect files 1 to 5 on every server to contain "AABBCC"
