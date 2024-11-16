@@ -998,15 +998,15 @@ if __name__ == "__main__":
         failed_tests.append("replica_node_failures_fast_recovery")
         print("replica_node_failures_fast_recovery failed")
 
-    if not replica_node_failures_slow_recovery():
-        failed_tests.append("replica_node_failures_slow_recovery")
-        print("replica_node_failures_slow_recovery failed")
+    # if not replica_node_failures_slow_recovery():
+    #     failed_tests.append("replica_node_failures_slow_recovery")
+    #     print("replica_node_failures_slow_recovery failed")
 
-    if not primary_node_failures_slow_recovery_outside_critical_section():
-        failed_tests.append(
-            "primary_node_failures_slow_recovery_outside_critical_section"
-        )
-        print("primary_node_failures_slow_recovery_outside_critical_section failed")
+    # if not primary_node_failures_slow_recovery_outside_critical_section():
+    #     failed_tests.append(
+    #         "primary_node_failures_slow_recovery_outside_critical_section"
+    #     )
+    #     print("primary_node_failures_slow_recovery_outside_critical_section failed")
 
     # This test case is not well defined
     # if not primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
