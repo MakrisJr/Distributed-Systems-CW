@@ -142,6 +142,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
         if not (self.raft_server.is_leader()):
+            print(f"Server {self.port}: lock_acquire not leader: ")
             return lock_pb2.Response(leader=self.raft_server.leader)
 
         client_id = request.client_id
@@ -153,8 +154,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         client_seq = self.clients[client_id]["seq"]
 
-        print(f"Server: lock_acquire received: {request.client_id}")
+        print(
+            f"Server {self.port}: lock_acquire received: {request.client_id}, requesting lock owned by {self.lock_owner}"
+        )
         self.lock_owner_lock.acquire()
+        print(f"server {self.port} lock_owner_lock acquired")
         if self.lock_owner is None:
             self.waiting_list.append(request.client_id)
 

@@ -100,8 +100,6 @@ class Client:
                 print(
                     f"Client {self.client_id}: RPC call failed with error: {e}. Retrying {attempt + 1}/{RETRY_LIMIT}..."
                 )
-                rpc_func_name = rpc_func.__name__
-                rpc_func = getattr(self.stub, rpc_func_name)
                 self.RPC_where_is_server()
                 time.sleep(RETRY_DELAY)
 
@@ -119,6 +117,8 @@ class Client:
                 self.stub = lock_pb2_grpc.LockServiceStub(self.channel)
 
                 time.sleep(RETRY_DELAY)
+
+            print(f"Client {self.client_id}: Retrying...")
 
         print(
             f"Client {self.client_id}: RETRY_RPC_CALL: Failed to receive response after retries."
