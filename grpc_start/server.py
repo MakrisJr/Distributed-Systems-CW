@@ -359,6 +359,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.server.add_insecure_port(f"[::]:{self.port}")
         self.server.start()
+        self.raft_server.serve()
         print("Server started, listening on ", self.port)
         time.sleep(5)
 
