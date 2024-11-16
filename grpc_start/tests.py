@@ -726,6 +726,7 @@ def primary_node_failures_slow_recovery_outside_critical_section():
     client3.RPC_lock_release()
 
     # Restart Server 1
+    server1 = LockServer("localhost", 50051, False)
     thread1 = threading.Thread(target=server1.serve)
     thread1.start()
     print("Server 1 restarting...")

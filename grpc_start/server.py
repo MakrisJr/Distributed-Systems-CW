@@ -391,7 +391,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         print(f"Server {self.port} Leader is {leader}")
         ip = leader.split(":")[0]
         port = leader.split(":")[1]
-        return lock_pb2.ServerLocation(ip=ip, port=port)
+        return lock_pb2.Address(ip=ip, port=port)
 
     def reset_own_files(self):
         for i in range(100):
