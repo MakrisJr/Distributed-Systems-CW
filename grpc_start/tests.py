@@ -503,6 +503,7 @@ def replica_node_failures_fast_recovery():
     print("Client 1 released lock")
 
     # Restart Server 2
+    server2 = LockServer("localhost", 50052, False)
     thread2 = threading.Thread(target=server2.serve)
     thread2.start()
     print("Server 2 restarting...")
