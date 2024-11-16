@@ -22,6 +22,7 @@ RAFT_SERVERS = ["localhost:50051", "localhost:50052", "localhost:50053"]
 class RaftServerState(Enum):  # if this is either-or, could just be a bool surely
     LEADER = 1
     FOLLOWER = 2
+    DEAD = 3
 
 
 LEADER_HEARTBEAT_TIMEOUT = 0.1
@@ -46,6 +47,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
         self.raft_servers.remove(f"{self.server_ip}:{self.server_port}")
 
         self.leader = None
+        self.state = RaftServerState.DEAD
 
         self.heartbeat_thread = None
 
@@ -84,7 +86,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             self.new_leader_timeout.cancel()
 
         self.heartbeat_thread = threading.Thread(target=self.send_heartbeats)
-        self.heartbeat_thread.daemon = True
+        # self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
 
     def send_heartbeats(self):
@@ -179,7 +181,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
     def become_new_leader(self):
         """The follower that detects the absence of the leader first becomes the new leader"""
-        print(f"RAFT {self.port}: New leader timer expired.")
+        print(f"RAFT {self.server_port}: New leader timer expired.")
         if self.state == RaftServerState.FOLLOWER:
             self.leader_start()
 
@@ -215,6 +217,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
             command = log_entry.command
             self.lock_server.commit_command(command)
+        else:
+            print(f"Raft {self.server_port} Received heartbeat.")
 
         return raft_pb2.Bool(value=True)
 
