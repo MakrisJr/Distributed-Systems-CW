@@ -27,7 +27,7 @@ LOCK_TIMEOUT = 6
 
 
 class LockServer(lock_pb2_grpc.LockServiceServicer):
-    def __init__(self, ip="localhost", port="50051"):
+    def __init__(self, ip="localhost", port="50051", is_leader_debug=False):
         self.lock_owner = None  # does not need to be synced independently; always equal to waiting_list[0]
 
         self.clients = {}  # needs to be synced - 'add client' action, 'increment client's expected seq number' action
@@ -49,6 +49,8 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.file_folder = "./files_" + str(port)
         self.lock_owner_lock = threading.Lock()
+
+        self.is_leader_debug = is_leader_debug
 
     def start_lock_timer(self):
         """Start or restart the lock timeout timer for the current lock owner."""
@@ -275,7 +277,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 # add file append operation to appends queue
                 self.raft_server.send_append_entry_rpcs(
                     log.LogEntry(
-                        cs.AddAppendCommand(filename=file_path, content=request.content)
+                        cs.AddAppendCommand(filename=filename, content=request.content)
                     )
                 )
                 self.appends.append((file_path, request.content))
@@ -343,7 +345,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             self.waiting_list.append(self.lock_owner)
 
         elif isinstance(command, cs.AddAppendCommand):
-            self.appends.append((command.filename, command.content))
+            self.appends.append(
+                (self.file_folder + "/" + command.filename, command.content)
+            )
             print("QUEUED APPENDS: " + str(self.appends))
 
         elif isinstance(command, cs.ExecuteAppendsCommand):
@@ -362,7 +366,7 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
     def serve(self):
         self.raft_server = raft_server.RaftServer(
-            self.ip, self.port, f"./log/{self.port}.log", self
+            self.ip, self.port, f"./log/{self.port}.log", self, self.is_leader_debug
         )
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         raft_pb2_grpc.add_RaftServiceServicer_to_server(self.raft_server, self.server)
@@ -370,11 +374,15 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
 
         self.server.add_insecure_port(f"[::]:{self.port}")
         self.server.start()
+        print("Initializing raft server")
+        self.raft_server.serve()
         print("Server started, listening on ", self.port)
         time.sleep(5)
 
     def stop(self):
         self.lock_timer.cancel()
+        if self.raft_server.new_leader_timeout:
+            self.raft_server.new_leader_timeout.cancel()
         self.server.stop(0)
 
     def where_is_server(self, request, context):
@@ -382,6 +390,11 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         ip = self.ip
         port = self.port
         return lock_pb2.ServerLocation(ip=ip, port=port)
+
+    def reset_own_files(self):
+        for i in range(100):
+            with open(f"./files_{self.port}/file_{i}", "w") as f:
+                f.write("")
 
 
 def create_files(n=100):
@@ -409,6 +422,8 @@ def reset_files(n=100):
                 f.write("")
 
     # delete files in ./log/*
+    if not os.path.exists("./log"):
+        os.makedirs("./log")
     for file in os.listdir("./log"):
         print(file)
         os.remove(os.path.join("./log", file))
