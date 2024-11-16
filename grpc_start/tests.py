@@ -465,25 +465,36 @@ def replica_node_failures_fast_recovery():
 
     servers = [server1, server2, server3]
 
-    # Validate results
     print("Checking files")
     expected = set(["AB", "BA"])
+    first_content = None
 
     for server in servers:
         print(f"Checking files in {server.file_folder}")
-        for i in range(1, 4):  # Adjust the range based on the number of files to check
+        for i in range(1, 4):
             try:
                 with open(f"{server.file_folder}/file_{i}", "r") as file:
                     content = file.read()
                     if content not in expected:
                         print(
-                            f"Test failed for {server.file_folder}/file_{i}: {content}"
+                            f"Test failed for {server.file_folder}/file_{i}: {content} (unexpected content)"
                         )
-                        exit(1)  # Use exit(1) or return False in a function
+                        exit(1)
+                    if first_content is None:
+                        first_content = (
+                            content  # Initialize with the first valid content
+                        )
+                    elif content != first_content:
+                        print(
+                            f"Inconsistent content detected: {server.file_folder}/file_{i} contains {content}, expected {first_content}"
+                        )
+                        exit(1)
+
             except FileNotFoundError:
                 print(f"File {server.file_folder}/file_{i} not found")
                 exit(1)  # Handle the missing file as a failure
-    print("All files passed")
+
+    print("All files passed with consistent content")
 
 
 def replica_node_failures_slow_recovery():
