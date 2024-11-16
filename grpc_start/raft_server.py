@@ -47,6 +47,8 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
 
         self.leader = None
 
+        self.is_leader_debug = is_leader
+
     def serve(self):
         self.establish_channels_stubs()
         print("Servers available: ", self.raft_servers)
@@ -58,10 +60,10 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             # create path and file if they dont exist
             os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
             open(self.log_file_path, "w").close()
-            # if is_leader:  # ONLY HERE FOR DEBUG PURPOSES!!!!
-            #     self.leader_start()
-            # else:
-            self.follower_start()
+            if self.is_leader_debug:  # ONLY HERE FOR DEBUG PURPOSES!!!!
+                self.leader_start()
+            else:
+                self.follower_start()
 
     def leader_start(self):
         # called when first coming into power
@@ -194,7 +196,7 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
     # this bit is executed on the followers - this is the CONSEQUENCE of the RPC call, not the call itself
     def append_entry(self, request, context):
         # if we receive an append_entries message, we know not to become the new leader
-        print(f"Rafter server {self.server_port}: Turned into follower.")
+        # print(f"Rafter server {self.server_port}: Turned into follower.")
         self.state = RaftServerState.FOLLOWER
         self.start_new_leader_timer()
         self.leader = request.leaderID

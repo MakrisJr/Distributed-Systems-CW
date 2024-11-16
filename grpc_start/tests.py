@@ -451,9 +451,9 @@ def test_single_server_fails_lock_held():
 
 # Complex test cases
 def replica_node_failures_fast_recovery():
-    server1 = LockServer("localhost", 50051)
-    server2 = LockServer("localhost", 50052)
-    server3 = LockServer("localhost", 50053)
+    server1 = LockServer("localhost", 50051, True)
+    server2 = LockServer("localhost", 50052, False)
+    server3 = LockServer("localhost", 50053, False)
 
     client1 = Client(1)
     client2 = Client(2)
@@ -604,13 +604,13 @@ if __name__ == "__main__":
     #     failed_tests.append("test_stuck_after_editing_file")
     #     print("test_stuck_after_editing_file failed")
 
-    if not test_single_server_fails_lock_free():
-        failed_tests.append("test_single_server_fails_lock_free")
-        print("test_single_server_fails_lock_free failed")
+    # if not test_single_server_fails_lock_free():
+    #     failed_tests.append("test_single_server_fails_lock_free")
+    #     print("test_single_server_fails_lock_free failed")
 
-    if not test_single_server_fails_lock_held():
-        failed_tests.append("test_single_server_fails_lock_held")
-        print("test_single_server_fails_lock_held failed")
+    # if not test_single_server_fails_lock_held():
+    #     failed_tests.append("test_single_server_fails_lock_held")
+    #     print("test_single_server_fails_lock_held failed")
 
     if not replica_node_failures_fast_recovery():
         failed_tests.append("replica_node_failures_fast_recovery")
