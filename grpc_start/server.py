@@ -118,6 +118,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         self.clients[client_id]["seq"] += 1
 
     def client_init(self, request, context):
+        while self.raft_server.pause:
+            time.sleep(0.1)
+
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
         print("client_init received from " + str(context.peer()))
@@ -141,6 +144,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
         return lock_pb2.Int(rc=client_id, seq=client_seq)
 
     def lock_acquire(self, request, context) -> lock_pb2.Response:
+        while self.raft_server.pause or not self.raft_server.leader:
+            time.sleep(0.1)
+
         if not (self.raft_server.is_leader()):
             print(f"Server {self.port}: lock_acquire not leader: ")
             return lock_pb2.Response(leader=self.raft_server.leader)
@@ -220,6 +226,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
                 file.write(bytes)
 
     def lock_release(self, request, context) -> lock_pb2.Response:
+        while self.raft_server.pause:
+            time.sleep(0.1)
+
         if not (self.raft_server.is_leader()):
             return lock_pb2.Response(leader=self.raft_server.leader)
 
@@ -252,6 +261,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             )
 
     def file_append(self, request, context) -> lock_pb2.Response:
+        while self.raft_server.pause:
+            time.sleep(0.1)
+
         if not (self.raft_server.is_leader()):
             return lock_pb2.Response(leader=self.raft_server.leader)
 
@@ -306,6 +318,9 @@ class LockServer(lock_pb2_grpc.LockServiceServicer):
             )
 
     def client_close(self, request, context):
+        while self.raft_server.pause:
+            time.sleep(0.1)
+
         if not (self.raft_server.is_leader()):
             return lock_pb2.Int(leader=self.raft_server.leader)
 

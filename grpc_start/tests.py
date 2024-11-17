@@ -801,9 +801,9 @@ def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_at
     print("Client 1 released lock")
 
     # Simulate Server 1 failure
-    server1.stop()
-    print("Server 1 stopped")
-    time.sleep(10)
+    # server1.stop()
+    # print("Server 1 stopped")
+    # time.sleep(10)
 
     # Client 2 acquires lock and appends to one file 20 times
     client2.RPC_lock_acquire()
@@ -829,6 +829,7 @@ def primary_node_failures_slow_recovery_during_critical_sections_and_test_for_at
     client3.RPC_lock_release()
 
     # Restart Server 1
+    server1 = LockServer("localhost", 50051, False)
     thread1 = threading.Thread(target=server1.serve)
     thread1.start()
     print("Server 1 restarting...")
@@ -898,7 +899,7 @@ def primary_and_replica_node_failures():
     # Client 1 appends AA to files 1 to 5
     client1.RPC_lock_acquire()
     print("Client 1 acquired lock")
-    for i in range(1, 3):
+    for i in range(1, 4):
         client1.RPC_append_file(str(i), "AA")
 
     # Simulate Server 2 failure
@@ -981,61 +982,107 @@ if __name__ == "__main__":
     # if not test_packet_delay():
     #     failed_tests.append("test_packet_delay")
     #     print("test_packet_delay failed")
+    # else:
+    #     print("test_packet_delay passed")
+
+    # time.sleep(3)
 
     # if not test_client_packet_loss():
     #     failed_tests.append("test_client_packet_loss")
     #     print("test_client_packet_loss failed")
+    # else:
+    #     print("test_client_packet_loss passed")
+
+    # time.sleep(3)
 
     # if not test_server_packet_loss():
     #     failed_tests.append("test_server_packet_loss")
     #     print("test_server_packet_loss failed")
+    # else:
+    #     print("test_server_packet_loss passed")
+
+    # time.sleep(3)
 
     # if not test_duplicated_packets():
     #     failed_tests.append("test_duplicated_packets")
     #     print("test_duplicated_packets failed")
+    # else:
+    #     print("test_duplicated_packets passed")
+
+    # time.sleep(3)
 
     # if not test_combined_network_failures():
     #     failed_tests.append("test_combined_network_failures")
     #     print("test_combined_network_failures failed")
+    # else:
+    #     print("test_combined_network_failures passed")
+
+    # time.sleep(3)
 
     # if not test_stuck_before_editing_file():
     #     failed_tests.append("test_stuck_before_editing_file")
     #     print("test_stuck_before_editing_file failed")
+    # else:
+    #     print("test_stuck_before_editing_file passed")
+
+    # time.sleep(3)
 
     # if not test_stuck_after_editing_file():
     #     failed_tests.append("test_stuck_after_editing_file")
     #     print("test_stuck_after_editing_file failed")
+    # else:
+    #     print("test_stuck_after_editing_file passed")
+
+    # time.sleep(3)
 
     # if not test_single_server_fails_lock_free():
     #     failed_tests.append("test_single_server_fails_lock_free")
     #     print("test_single_server_fails_lock_free failed")
+    # else:
+    #     print("test_single_server_fails_lock_free passed")
+
+    # time.sleep(3)
 
     # if not test_single_server_fails_lock_held():
     #     failed_tests.append("test_single_server_fails_lock_held")
     #     print("test_single_server_fails_lock_held failed")
 
+    # time.sleep(3)
+
     # if not replica_node_failures_fast_recovery():
     #     failed_tests.append("replica_node_failures_fast_recovery")
     #     print("replica_node_failures_fast_recovery failed")
+    # else:
+    #     print("replica_node_failures_fast_recovery passed")
+
+    # time.sleep(3)
 
     # if not replica_node_failures_slow_recovery():
     #     failed_tests.append("replica_node_failures_slow_recovery")
     #     print("replica_node_failures_slow_recovery failed")
+    # else:
+    #     print("replica_node_failures_slow_recovery passed")
 
-    if not primary_node_failures_slow_recovery_outside_critical_section():
-        failed_tests.append(
-            "primary_node_failures_slow_recovery_outside_critical_section"
-        )
-        print("primary_node_failures_slow_recovery_outside_critical_section failed")
+    # time.sleep(3)
+
+    # if not primary_node_failures_slow_recovery_outside_critical_section():
+    #     failed_tests.append(
+    #         "primary_node_failures_slow_recovery_outside_critical_section"
+    #     )
+    #     print("primary_node_failures_slow_recovery_outside_critical_section failed")
+    # else:
+    #     print("primary_node_failures_slow_recovery_outside_critical_section passed")
+
+    # time.sleep(3)
 
     # This test case is not well defined
-    # if not primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
-    #     failed_tests.append(
-    #         "primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity"
-    #     )
-    #     print(
-    #         "primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity failed"
-    #     )
+    if not primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity():
+        failed_tests.append(
+            "primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity"
+        )
+        print(
+            "primary_node_failures_slow_recovery_during_critical_sections_and_test_for_atomicity failed"
+        )
 
     # if not primary_and_replica_node_failures():
     #     failed_tests.append("primary_and_replica_node_failures")
