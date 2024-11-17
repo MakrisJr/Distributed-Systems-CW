@@ -47,7 +47,7 @@ message Empty {
 
 message Address {
     string ip = 1;
-    int32 port = 2;
+    string port = 2;
     // if the primary server is not decided yet, the port will be -1
 }
 
