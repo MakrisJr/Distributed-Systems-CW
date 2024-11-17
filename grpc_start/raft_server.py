@@ -147,13 +147,16 @@ class RaftServer(raft_pb2_grpc.RaftServiceServicer):
             print(f"Raft server {self.server_port}: Finding leader.")
             for raft_node in self.raft_servers:
                 try:
-                    response = self.stubs[raft_node].where_is_leader(raft_pb2.Empty())
-                    if len(response.value) > 0:
-                        print(
-                            f"Raft server {self.server_port}: Found leader: {response.value}"
+                    if raft_node in self.stubs:
+                        response = self.stubs[raft_node].where_is_leader(
+                            raft_pb2.Empty()
                         )
-                        self.leader = response.value
-                        return response.value
+                        if len(response.value) > 0:
+                            print(
+                                f"Raft server {self.server_port}: Found leader: {response.value}"
+                            )
+                            self.leader = response.value
+                            return response.value
                 except grpc.RpcError:
                     print(
                         f"Raft server {self.server_port}: failed to contact node {raft_node}"
