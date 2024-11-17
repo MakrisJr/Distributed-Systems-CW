@@ -47,7 +47,8 @@ def test_packet_delay():
     with open(f"{server.file_folder}/file_0", "r") as file:
         message = file.read()
 
-    return message is None
+    # message should be empty
+    return message == ""
     # expected result: client1 receives LOCK_EXPIRED, client2 has the lock and message is not written to file
 
 
